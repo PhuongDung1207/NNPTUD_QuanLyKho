@@ -23,9 +23,7 @@ mongoose.connection.on('disconnecting', function () {
   console.log("disconnecting");
 })
 
-app.use(function (req, res, next) {
-  next(createError(404));
-});
+// Moved the 404 handler to the end to allow other routes/static files to match first.
 
 app.use(logger("dev"));
 app.use(express.json());
