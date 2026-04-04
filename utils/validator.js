@@ -90,10 +90,94 @@ const productUpdateRules = [
   body("tags.*").optional().isString().withMessage("each tag must be a string")
 ];
 
+const commonStatuses = ["active", "inactive"];
+
+const brandListRules = [
+  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
+  query("search").optional().isString()
+];
+
+const brandCreateRules = [
+  body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 160 }),
+  body("code").trim().notEmpty().withMessage("code is required").isLength({ max: 40 }),
+  body("description").optional({ values: "falsy" }).isLength({ max: 1000 }),
+  body("countryOfOrigin").optional({ values: "falsy" }).isLength({ max: 120 }),
+  body("status").optional().isIn(commonStatuses)
+];
+
+const brandUpdateRules = [
+  body("name").optional().trim().notEmpty().withMessage("name cannot be empty").isLength({ max: 160 }),
+  body("code").optional().trim().notEmpty().withMessage("code cannot be empty").isLength({ max: 40 }),
+  body("description").optional({ values: "falsy" }).isLength({ max: 1000 }),
+  body("countryOfOrigin").optional({ values: "falsy" }).isLength({ max: 120 }),
+  body("status").optional().isIn(commonStatuses)
+];
+
+const unitListRules = [
+  query("page").optional().isInt({ min: 1 }),
+  query("limit").optional().isInt({ min: 1, max: 100 }),
+  query("status").optional().isIn(commonStatuses),
+  query("search").optional().isString()
+];
+
+const unitCreateRules = [
+  body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 80 }),
+  body("code").trim().notEmpty().withMessage("code is required").isLength({ max: 30 }),
+  body("symbol").optional({ values: "falsy" }).isLength({ max: 20 }),
+  body("precision").optional().isInt({ min: 0, max: 6 }),
+  body("status").optional().isIn(commonStatuses)
+];
+
+const unitUpdateRules = [
+  body("name").optional().trim().notEmpty().isLength({ max: 80 }),
+  body("code").optional().trim().notEmpty().isLength({ max: 30 }),
+  body("symbol").optional({ values: "falsy" }).isLength({ max: 20 }),
+  body("precision").optional().isInt({ min: 0, max: 6 }),
+  body("status").optional().isIn(commonStatuses)
+];
+
+const supplierListRules = [
+  query("page").optional().isInt({ min: 1 }),
+  query("limit").optional().isInt({ min: 1, max: 100 }),
+  query("status").optional().isIn(commonStatuses),
+  query("search").optional().isString()
+];
+
+const supplierCreateRules = [
+  body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 160 }),
+  body("code").trim().notEmpty().withMessage("code is required").isLength({ max: 40 }),
+  body("contactName").optional({ values: "falsy" }).isLength({ max: 120 }),
+  body("phone").optional({ values: "falsy" }).isLength({ max: 20 }),
+  body("email").optional({ values: "falsy" }).isEmail().withMessage("Invalid email").isLength({ max: 160 }),
+  body("taxCode").optional({ values: "falsy" }).isLength({ max: 40 }),
+  body("status").optional().isIn(commonStatuses)
+];
+
+const supplierUpdateRules = [
+  body("name").optional().trim().notEmpty().isLength({ max: 160 }),
+  body("code").optional().trim().notEmpty().isLength({ max: 40 }),
+  body("contactName").optional({ values: "falsy" }).isLength({ max: 120 }),
+  body("phone").optional({ values: "falsy" }).isLength({ max: 20 }),
+  body("email").optional({ values: "falsy" }).isEmail().isLength({ max: 160 }),
+  body("taxCode").optional({ values: "falsy" }).isLength({ max: 40 }),
+  body("status").optional().isIn(commonStatuses)
+];
+
 module.exports = {
   validate,
   mongoIdParamRule,
   productListRules,
   productCreateRules,
-  productUpdateRules
+  productUpdateRules,
+  brandListRules,
+  brandCreateRules,
+  brandUpdateRules,
+  unitListRules,
+  unitCreateRules,
+  unitUpdateRules,
+  supplierListRules,
+  supplierCreateRules,
+  supplierUpdateRules
 };

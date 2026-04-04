@@ -5,16 +5,7 @@ const schemaOptions = {
   versionKey: false
 };
 
-function slugify(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
+const slugify = require("../utils/slugify");
 
 const categorySchema = new mongoose.Schema(
   {
