@@ -49,10 +49,6 @@ const userSchema = new mongoose.Schema(
       ref: "Role",
       required: true
     },
-    address: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Address"
-    },
     status: {
       type: String,
       enum: ["active", "inactive", "locked"],

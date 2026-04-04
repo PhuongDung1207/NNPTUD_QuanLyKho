@@ -9,16 +9,14 @@ const {
   Category,
   Brand,
   Supplier,
-  Unit,
-  Tax
+  Unit
 } = require("../schemas");
 
 const productPopulate = [
   { path: "category", select: "name code slug" },
   { path: "brand", select: "name code slug" },
   { path: "supplier", select: "name code contactName phone email" },
-  { path: "uom", select: "name code symbol precision" },
-  { path: "tax", select: "name code rate" }
+  { path: "uom", select: "name code symbol precision" }
 ];
 
 const inventoryPopulate = [
@@ -57,8 +55,7 @@ async function validateProductReferences(payload, session) {
     assertReferenceExists(Category, payload.category, "category", session),
     assertReferenceExists(Brand, payload.brand, "brand", session),
     assertReferenceExists(Supplier, payload.supplier, "supplier", session),
-    assertReferenceExists(Unit, payload.uom, "uom", session),
-    assertReferenceExists(Tax, payload.tax, "tax", session)
+    assertReferenceExists(Unit, payload.uom, "uom", session)
   ]);
 }
 

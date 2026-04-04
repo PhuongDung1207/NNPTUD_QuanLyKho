@@ -42,10 +42,6 @@ const supplierSchema = new mongoose.Schema(
       trim: true,
       maxlength: 40
     },
-    address: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Address"
-    },
     status: {
       type: String,
       enum: ["active", "inactive"],

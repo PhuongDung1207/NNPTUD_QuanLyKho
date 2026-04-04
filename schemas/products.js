@@ -114,10 +114,6 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Unit"
     },
-    tax: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Tax"
-    },
     price: {
       type: priceSchema,
       default: () => ({})

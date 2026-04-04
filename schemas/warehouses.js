@@ -26,10 +26,6 @@ const warehouseSchema = new mongoose.Schema(
       trim: true,
       maxlength: 800
     },
-    address: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Address"
-    },
     manager: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
