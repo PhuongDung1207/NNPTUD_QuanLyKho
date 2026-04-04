@@ -23,10 +23,6 @@ mongoose.connection.on('disconnecting', function () {
   console.log("disconnecting");
 })
 
-app.use(function (req, res, next) {
-  next(createError(404));
-});
-
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
