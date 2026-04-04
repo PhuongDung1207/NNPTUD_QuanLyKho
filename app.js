@@ -1,10 +1,9 @@
-require("dotenv").config();
-
 const path = require("path");
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 const mongoose = require("mongoose");
+const multer = require("multer");
 
 const createError = require("http-errors");
 
@@ -47,10 +46,14 @@ app.use((error, req, res, next) => {
     return next(error);
   }
 
-  const status = error.status || 500;
+  const status = error.status || (error instanceof multer.MulterError ? 400 : 500);
+  const message =
+    error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE"
+      ? "File size exceeds the 5MB limit"
+      : error.message || "Internal server error";
 
   res.status(status).json({
-    message: error.message || "Internal server error",
+    message,
     errors: error.errors || undefined,
     stack: process.env.NODE_ENV === "development" ? error.stack : undefined
   });

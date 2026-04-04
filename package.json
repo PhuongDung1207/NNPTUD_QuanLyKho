@@ -7,7 +7,7 @@
   "scripts": {
     "start": "nodemon ./bin/www",
     "start:prod": "node ./bin/www",
-    "lint:check": "node --check app.js && node --check bin/www && node --check routes/index.js && node --check routes/products.js && node --check routes/purchaseOrders.js && node --check controllers/products.js && node --check controllers/purchaseOrders.js && node --check utils/validator.js"
+    "lint:check": "node --check app.js && node --check bin/www && node --check routes/index.js && node --check routes/products.js && node --check routes/purchaseOrders.js && node --check routes/warehouses.js && node --check routes/inventories.js && node --check routes/transferOrders.js && node --check controllers/products.js && node --check controllers/purchaseOrders.js && node --check controllers/warehouses.js && node --check controllers/inventories.js && node --check controllers/transferOrders.js && node --check schemas/inventories.js && node --check utils/validator.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

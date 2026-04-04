@@ -11,9 +11,8 @@ Backend scaffold for a warehouse management system using Express and MongoDB, st
 
 ## Quick Start
 
-1. Copy `.env.example` to `.env`
-2. Install dependencies with `npm install`
-3. Run the dev server with `npm start`
+1. Install dependencies with `npm install`
+2. Run the dev server with `npm start`
 
 ## Product API
 
