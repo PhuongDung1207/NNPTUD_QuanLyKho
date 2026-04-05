@@ -141,3 +141,5 @@ vite.config.ts.timestamp-*
 *.xlsx
 *.xls
 *.csv
+
+api.txt

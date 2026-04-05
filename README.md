@@ -36,12 +36,14 @@ Default admin credentials:
 
 - `username`: `admin`
 - `password`: `admin123456`
+- `email`: `admin@warehouse.local`
 
 You can override them with:
 
 - `DEFAULT_ADMIN_USERNAME`
 - `DEFAULT_ADMIN_PASSWORD`
 - `DEFAULT_ADMIN_FULLNAME`
+- `DEFAULT_ADMIN_EMAIL`
 
 Auth endpoints:
 
@@ -73,6 +75,7 @@ Notes:
 
 - only `admin` can CRUD users, lock/unlock, and read roles/permissions
 - `user` can access their own authenticated profile through `/api/v1/auth/me` or `/api/v1/users/me`
+- the default seeded admin is created in `active` status with a pre-verified email
 - newly created users stay in `inactive` status until they activate their account from the email invitation
 - admin does not set the initial password anymore; the invited user sets it during account activation
 - bulk user import accepts `.xlsx/.xls` and creates each successful row with the same inactive + activation-email flow
