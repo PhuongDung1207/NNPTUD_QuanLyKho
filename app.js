@@ -14,7 +14,7 @@ const { seedAccessControl } = require("./utils/accessControlBootstrap");
 const app = express();
 const publicDirectory = path.join(__dirname, "public");
 
-mongoose.connect('mongodb://localhost:27017/warehouse');
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/warehouse');
 mongoose.connection.on('connected', function () {
   console.log("connected");
   seedAccessControl().catch((error) => {
@@ -44,6 +44,10 @@ app.get("/activate-account", (req, res) => {
 
 app.get("/users", (req, res) => {
   res.sendFile(path.join(publicDirectory, "users.html"));
+});
+
+app.get("/products", (req, res) => {
+  res.sendFile(path.join(publicDirectory, "products.html"));
 });
 
 app.get("/healthz", (req, res) => {
