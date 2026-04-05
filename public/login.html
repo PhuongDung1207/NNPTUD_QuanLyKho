@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dang nhap he thong kho</title>
+  <link rel="stylesheet" href="/styles/login.css">
+</head>
+<body>
+  <main class="login-page">
+    <section class="hero-panel">
+      <p class="eyebrow">Warehouse Management</p>
+      <h1>Dang nhap de quan ly kho hang tap trung va chinh xac.</h1>
+      <p class="hero-copy">
+        Theo doi ton kho, xuat nhap hang va lich su giao dich trong mot giao dien gon gang,
+        de nhin va san sang cho nhom van hanh.
+      </p>
+
+      <div class="hero-stats">
+        <article>
+          <strong>24/7</strong>
+          <span>Theo doi hoat dong kho moi luc</span>
+        </article>
+        <article>
+          <strong>Real-time</strong>
+          <span>Cap nhat ton kho ngay khi phat sinh giao dich</span>
+        </article>
+        <article>
+          <strong>Multi-role</strong>
+          <span>Phan quyen cho quan tri, kho va ke toan</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="form-panel">
+      <div class="form-card">
+        <div class="form-heading">
+          <p class="tag">Chao mung tro lai</p>
+          <h2>Dang nhap tai khoan</h2>
+          <p>Nhap thong tin de truy cap he thong quan ly kho.</p>
+        </div>
+
+        <form class="login-form" action="#" method="post">
+          <label class="field">
+            <span>Ten dang nhap hoac email</span>
+            <input type="text" name="identity" placeholder="vd: admin@khohang.vn" autocomplete="username" required>
+          </label>
+
+          <label class="field">
+            <span>Mat khau</span>
+            <div class="password-row">
+              <input id="passwordInput" type="password" name="password" placeholder="Nhap mat khau" autocomplete="current-password" required>
+              <button id="togglePassword" class="toggle-password" type="button" aria-label="Hien thi mat khau">Hien</button>
+            </div>
+          </label>
+
+          <div class="form-options">
+            <label class="checkbox">
+              <input type="checkbox" name="remember">
+              <span>Ghi nho dang nhap</span>
+            </label>
+            <a href="#" class="text-link">Quen mat khau?</a>
+          </div>
+
+          <button class="submit-button" type="submit">Dang nhap</button>
+        </form>
+
+        <div class="divider">
+          <span>Hoac</span>
+        </div>
+
+        <div class="secondary-actions">
+          <button type="button" class="ghost-button">Dang nhap bang ma nhan vien</button>
+          <p>
+            Chua co tai khoan?
+            <a href="#" class="text-link">Lien he quan tri vien</a>
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const passwordInput = document.getElementById("passwordInput");
+    const togglePasswordButton = document.getElementById("togglePassword");
+    const loginForm = document.querySelector(".login-form");
+    const submitButton = document.querySelector(".submit-button");
+
+    // Toggle show/hide password
+    togglePasswordButton.addEventListener("click", function () {
+      const isHidden = passwordInput.type === "password";
+      passwordInput.type = isHidden ? "text" : "password";
+      togglePasswordButton.textContent = isHidden ? "An" : "Hien";
+      togglePasswordButton.setAttribute(
+        "aria-label",
+        isHidden ? "An mat khau" : "Hien thi mat khau"
+      );
+    });
+
+    // Show inline error message
+    function showError(message) {
+      let errorBox = document.getElementById("loginError");
+      if (!errorBox) {
+        errorBox = document.createElement("p");
+        errorBox.id = "loginError";
+        errorBox.style.cssText =
+          "color:#ef4444;font-size:.875rem;margin-top:.5rem;padding:.6rem .9rem;" +
+          "background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);" +
+          "border-radius:.5rem;";
+        submitButton.parentNode.insertBefore(errorBox, submitButton);
+      }
+      errorBox.textContent = message;
+      errorBox.hidden = false;
+    }
+
+    function clearError() {
+      const errorBox = document.getElementById("loginError");
+      if (errorBox) errorBox.hidden = true;
+    }
+
+    // Set loading state on submit button
+    function setLoading(isLoading) {
+      submitButton.disabled = isLoading;
+      submitButton.textContent = isLoading ? "Dang dang nhap..." : "Dang nhap";
+    }
+
+    // Handle login form submit
+    loginForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      clearError();
+
+      const identity = loginForm.querySelector("[name='identity']").value.trim();
+      const password = loginForm.querySelector("[name='password']").value;
+
+      if (!identity || !password) {
+        showError("Vui long nhap ten dang nhap va mat khau.");
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const response = await fetch("/api/v1/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ username: identity, password })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          const errorMessage =
+            result?.message || result?.errors?.[0]?.msg || "Dang nhap that bai. Vui long thu lai.";
+          showError(errorMessage);
+          return;
+        }
+
+        // Redirect to users page after successful login
+        window.location.href = "/users";
+      } catch (err) {
+        showError("Khong the ket noi den may chu. Vui long kiem tra lai ket noi.");
+        console.error("Login error:", err);
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "nodemon ./bin/www",
     "start:prod": "node ./bin/www",
-    "lint:check": "node --check app.js && node --check bin/www && node --check routes/index.js && node --check routes/products.js && node --check controllers/products.js"
+    "lint:check": "node --check app.js && node --check bin/www && node --check routes/index.js && node --check routes/auth.js && node --check routes/users.js && node --check routes/roles.js && node --check routes/permissions.js && node --check routes/products.js && node --check controllers/auth.js && node --check controllers/users.js && node --check controllers/roles.js && node --check controllers/permissions.js && node --check controllers/products.js && node --check utils/authHandler.js && node --check utils/accessControlBootstrap.js && node --check utils/validator.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -21,7 +21,8 @@
     "mongoose": "^8.12.1",
     "morgan": "^1.10.0",
     "multer": "^2.0.0",
-    "nodemailer": "^6.10.1"
+    "nodemailer": "^6.10.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

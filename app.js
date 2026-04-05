@@ -9,12 +9,17 @@ const mongoose = require("mongoose");
 const createError = require("http-errors");
 
 const apiRouter = require("./routes");
+const { seedAccessControl } = require("./utils/accessControlBootstrap");
 
 const app = express();
+const publicDirectory = path.join(__dirname, "public");
 
 mongoose.connect('mongodb://localhost:27017/warehouse');
 mongoose.connection.on('connected', function () {
   console.log("connected");
+  seedAccessControl().catch((error) => {
+    console.error("failed to seed access control", error);
+  });
 })
 mongoose.connection.on('disconnected', function () {
   console.log("disconnected");
@@ -23,15 +28,23 @@ mongoose.connection.on('disconnecting', function () {
   console.log("disconnecting");
 })
 
-app.use(function (req, res, next) {
-  next(createError(404));
-});
-
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(publicDirectory));
+
+app.get(["/", "/login"], (req, res) => {
+  res.sendFile(path.join(publicDirectory, "login.html"));
+});
+
+app.get("/activate-account", (req, res) => {
+  res.sendFile(path.join(publicDirectory, "activate-account.html"));
+});
+
+app.get("/users", (req, res) => {
+  res.sendFile(path.join(publicDirectory, "users.html"));
+});
 
 app.get("/healthz", (req, res) => {
   res.json({
