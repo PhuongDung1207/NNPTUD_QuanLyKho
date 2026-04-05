@@ -2,6 +2,7 @@ const { body, param, query, validationResult } = require("express-validator");
 
 const productStatuses = ["draft", "active", "inactive", "discontinued"];
 const purchaseOrderStatuses = ["draft", "pending", "approved", "received", "cancelled"];
+const batchLotStatuses = ["available", "blocked", "expired"];
 
 function validate(req, res, next) {
   const result = validationResult(req);
@@ -199,6 +200,131 @@ const supplierUpdateRules = [
   body("status").optional().isIn(commonStatuses)
 ];
 
+const purchaseOrderPartialReceiveRules = [
+  body("note").optional({ values: "falsy" }).isLength({ max: 500 }).withMessage("note must be at most 500 characters"),
+  body("items").isArray({ min: 1 }).withMessage("items must be a non-empty array"),
+  body("items.*.purchaseOrderItemId")
+    .notEmpty()
+    .withMessage("purchaseOrderItemId is required")
+    .isMongoId()
+    .withMessage("purchaseOrderItemId must be a valid ObjectId"),
+  body("items.*.receivedQuantity")
+    .notEmpty()
+    .withMessage("receivedQuantity is required")
+    .isFloat({ gt: 0 })
+    .withMessage("receivedQuantity must be greater than 0"),
+  body("items").custom((items) => {
+    const ids = items.map((item) => item.purchaseOrderItemId);
+    const uniqueIds = new Set(ids);
+
+    if (uniqueIds.size !== ids.length) {
+      throw new Error("purchaseOrderItemId must not be duplicated in items");
+    }
+
+    return true;
+  })
+];
+
+const purchaseOrderReceiveRules = [
+  body("note").optional({ values: "falsy" }).isLength({ max: 500 }).withMessage("note must be at most 500 characters"),
+  body("items").optional().isArray().withMessage("items must be an array"),
+  body("items.*.purchaseOrderItemId")
+    .optional()
+    .notEmpty()
+    .withMessage("purchaseOrderItemId is required")
+    .isMongoId()
+    .withMessage("purchaseOrderItemId must be a valid ObjectId"),
+  body("items").optional().custom((items = []) => {
+    const ids = items.map((item) => item.purchaseOrderItemId);
+    const uniqueIds = new Set(ids);
+
+    if (uniqueIds.size !== ids.length) {
+      throw new Error("purchaseOrderItemId must not be duplicated in items");
+    }
+
+    return true;
+  })
+];
+
+const batchLotFieldsRules = [
+  body("product").notEmpty().withMessage("product is required").isMongoId().withMessage("product must be a valid ObjectId"),
+  body("warehouse").notEmpty().withMessage("warehouse is required").isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  body("lotCode").trim().notEmpty().withMessage("lotCode is required").isLength({ max: 50 }).withMessage("lotCode must be at most 50 characters"),
+  body("manufactureDate").optional({ values: "falsy" }).isISO8601().withMessage("manufactureDate must be a valid ISO 8601 date"),
+  body("expiryDate").optional({ values: "falsy" }).isISO8601().withMessage("expiryDate must be a valid ISO 8601 date"),
+  body("quantity").notEmpty().withMessage("quantity is required").isFloat({ min: 0 }).withMessage("quantity must be a non-negative number"),
+  body("status").optional().isIn(batchLotStatuses).withMessage(`status must be one of: ${batchLotStatuses.join(", ")}`)
+];
+
+const batchLotListRules = [
+  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("product").optional().isMongoId().withMessage("product must be a valid ObjectId"),
+  query("warehouse").optional().isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  query("status").optional().isIn(batchLotStatuses).withMessage(`status must be one of: ${batchLotStatuses.join(", ")}`),
+  query("lotCode").optional().trim().isLength({ min: 1, max: 50 }).withMessage("lotCode must be between 1 and 50 characters"),
+  query("expiryDate").optional().isISO8601().withMessage("expiryDate must be a valid ISO 8601 date")
+];
+
+const batchLotCreateRules = [
+  ...batchLotFieldsRules,
+  body().custom((payload) => {
+    if (payload.manufactureDate && payload.expiryDate && new Date(payload.manufactureDate) > new Date(payload.expiryDate)) {
+      throw new Error("manufactureDate must be before or equal to expiryDate");
+    }
+
+    return true;
+  })
+];
+
+const batchLotUpdateRules = [
+  body("product").optional().isMongoId().withMessage("product must be a valid ObjectId"),
+  body("warehouse").optional().isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  body("lotCode").optional().trim().notEmpty().withMessage("lotCode cannot be empty").isLength({ max: 50 }).withMessage("lotCode must be at most 50 characters"),
+  body("manufactureDate").optional({ values: "falsy" }).isISO8601().withMessage("manufactureDate must be a valid ISO 8601 date"),
+  body("expiryDate").optional({ values: "falsy" }).isISO8601().withMessage("expiryDate must be a valid ISO 8601 date"),
+  body("quantity").optional().isFloat({ min: 0 }).withMessage("quantity must be a non-negative number"),
+  body("status").optional().isIn(batchLotStatuses).withMessage(`status must be one of: ${batchLotStatuses.join(", ")}`),
+  body().custom((payload) => {
+    if (payload.manufactureDate && payload.expiryDate && new Date(payload.manufactureDate) > new Date(payload.expiryDate)) {
+      throw new Error("manufactureDate must be before or equal to expiryDate");
+    }
+
+    return true;
+  })
+];
+
+const batchLotStatusRules = [
+  body("status")
+    .notEmpty()
+    .withMessage("status is required")
+    .isIn(batchLotStatuses)
+    .withMessage(`status must be one of: ${batchLotStatuses.join(", ")}`)
+];
+
+const batchLotReceiveItemRules = [
+  body("items.*.batchLots").optional().isArray({ min: 1 }).withMessage("batchLots must be a non-empty array"),
+  body("items.*.batchLots.*.lotCode")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("lotCode is required")
+    .isLength({ max: 50 })
+    .withMessage("lotCode must be at most 50 characters"),
+  body("items.*.batchLots.*.manufactureDate")
+    .optional({ values: "falsy" })
+    .isISO8601()
+    .withMessage("manufactureDate must be a valid ISO 8601 date"),
+  body("items.*.batchLots.*.expiryDate")
+    .optional({ values: "falsy" })
+    .isISO8601()
+    .withMessage("expiryDate must be a valid ISO 8601 date"),
+  body("items.*.batchLots.*.quantity")
+    .optional()
+    .isFloat({ gt: 0 })
+    .withMessage("batchLots quantity must be greater than 0")
+];
+
 module.exports = {
   validate,
   mongoIdParamRule,
@@ -207,6 +333,7 @@ module.exports = {
   productUpdateRules,
   purchaseOrderListRules,
   purchaseOrderCreateRules,
+<<<<<<< HEAD
   purchaseOrderUpdateRules
   brandListRules,
   brandCreateRules,
@@ -217,4 +344,14 @@ module.exports = {
   supplierListRules,
   supplierCreateRules,
   supplierUpdateRules
+=======
+  purchaseOrderUpdateRules,
+  purchaseOrderPartialReceiveRules,
+  purchaseOrderReceiveRules,
+  batchLotListRules,
+  batchLotCreateRules,
+  batchLotUpdateRules,
+  batchLotStatusRules,
+  batchLotReceiveItemRules
+>>>>>>> 0aaacad (final)
 };
