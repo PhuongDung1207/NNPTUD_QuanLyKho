@@ -24,9 +24,9 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
       trim: true,
       unique: true,
+      sparse: true,
       lowercase: true,
       maxlength: 160
     },
@@ -37,8 +37,8 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
-      minlength: 6
+      minlength: 8,
+      select: false
     },
     avatarUrl: {
       type: String,
@@ -56,6 +56,31 @@ const userSchema = new mongoose.Schema(
     },
     lastLoginAt: {
       type: Date
+    },
+    emailVerifiedAt: {
+      type: Date,
+      default: null
+    },
+    activationTokenHash: {
+      type: String,
+      default: null,
+      select: false
+    },
+    activationTokenExpiresAt: {
+      type: Date,
+      default: null
+    },
+    activationEmailSentAt: {
+      type: Date,
+      default: null
+    },
+    activationCompletedAt: {
+      type: Date,
+      default: null
+    },
+    deletedAt: {
+      type: Date,
+      default: null
     }
   },
   schemaOptions

@@ -1,5 +1,6 @@
 const express = require("express");
-
+const { requireAuth, authorizePermissions } = require("../utils/authHandler");
+const { PERMISSION_CODES } = require("../utils/accessControlBootstrap");
 const productsController = require("../controllers/products");
 const asyncHandler = require("../utils/asyncHandler");
 const {
@@ -12,17 +13,18 @@ const {
 
 const router = express.Router();
 
+// GET / - Public to support dashboard stats for anonymous users
 router.get(
   "/",
   productListRules,
   validate,
   asyncHandler(async (req, res) => {
     const result = await productsController.listProducts(req.query);
-
     res.json(result);
   })
 );
 
+// GET /:id - Public access
 router.get(
   "/:id",
   mongoIdParamRule("id"),
@@ -39,6 +41,8 @@ router.get(
 
 router.post(
   "/",
+  requireAuth,
+  authorizePermissions(PERMISSION_CODES.PRODUCT_CREATE),
   productCreateRules,
   validate,
   asyncHandler(async (req, res) => {
@@ -53,6 +57,8 @@ router.post(
 
 router.patch(
   "/:id",
+  requireAuth,
+  authorizePermissions(PERMISSION_CODES.PRODUCT_UPDATE),
   mongoIdParamRule("id"),
   productUpdateRules,
   validate,
@@ -68,6 +74,8 @@ router.patch(
 
 router.delete(
   "/:id",
+  requireAuth,
+  authorizePermissions(PERMISSION_CODES.PRODUCT_DELETE),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
