@@ -60,8 +60,6 @@ async function validateProductReferences(payload, session) {
 }
 
 async function createProductWithInventory(payload) {
-  const session = await mongoose.startSession();
-
   try {
     const {
       warehouse,
@@ -78,79 +76,59 @@ async function createProductWithInventory(payload) {
       throw createError(400, "reservedQuantity cannot be greater than initialQuantity");
     }
 
-    session.startTransaction();
-
+    // Validate references without session
     await validateProductReferences(
       {
         ...productPayload,
         warehouse
       },
-      session
+      null
     );
 
-    const [product] = await Product.create(
-      [
-        cleanUndefined({
-          ...productPayload,
-          price: cleanUndefined(productPayload.price || {}),
-          dimensions: cleanUndefined(productPayload.dimensions || {}),
-          imageUrls: productPayload.imageUrls || [],
-          tags: productPayload.tags || []
-        })
-      ],
-      { session }
+    // 1. Create Product
+    const product = await Product.create(
+      cleanUndefined({
+        ...productPayload,
+        price: cleanUndefined(productPayload.price || {}),
+        dimensions: cleanUndefined(productPayload.dimensions || {}),
+        imageUrls: productPayload.imageUrls || [],
+        tags: productPayload.tags || []
+      })
     );
 
-    const [inventory] = await Inventory.create(
-      [
-        {
-          product: product._id,
-          warehouse,
-          quantityOnHand: Number(initialQuantity),
-          reservedQuantity: Number(reservedQuantity),
-          reorderPoint: Number(reorderPoint),
-          minStockLevel: Number(minStockLevel),
-          maxStockLevel: Number(maxStockLevel),
-          lastStockedAt: Number(initialQuantity) > 0 ? new Date() : undefined
-        }
-      ],
-      { session }
-    );
+    // 2. Create Inventory
+    const inventory = await Inventory.create({
+      product: product._id,
+      warehouse,
+      quantityOnHand: Number(initialQuantity),
+      reservedQuantity: Number(reservedQuantity),
+      reorderPoint: Number(reorderPoint),
+      minStockLevel: Number(minStockLevel),
+      maxStockLevel: Number(maxStockLevel),
+      lastStockedAt: Number(initialQuantity) > 0 ? new Date() : undefined
+    });
 
+    // 3. Create Transaction record if needed
     if (Number(initialQuantity) > 0) {
-      await InventoryTransaction.create(
-        [
-          {
-            inventory: inventory._id,
-            product: product._id,
-            warehouse,
-            type: "opening_balance",
-            quantity: Number(initialQuantity),
-            balanceAfter: Number(initialQuantity),
-            note: openingNote || "Initial stock created together with product"
-          }
-        ],
-        { session }
-      );
+      await InventoryTransaction.create({
+        inventory: inventory._id,
+        product: product._id,
+        warehouse,
+        type: "opening_balance",
+        quantity: Number(initialQuantity),
+        balanceAfter: Number(initialQuantity),
+        note: openingNote || "Initial stock created together with product"
+      });
     }
 
-    const populatedInventory = await Inventory.findById(inventory._id)
-      .populate(inventoryPopulate)
-      .session(session);
-
-    await session.commitTransaction();
+    const populatedInventory = await Inventory.findById(inventory._id).populate(inventoryPopulate);
 
     return populatedInventory;
   } catch (error) {
-    await session.abortTransaction();
-
     if (error?.code === 11000) {
       throw createError(409, parseDuplicateKey(error));
     }
-
     throw error;
-  } finally {
-    await session.endSession();
   }
 }
 

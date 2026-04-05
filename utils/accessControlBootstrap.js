@@ -10,7 +10,11 @@ const PERMISSION_CODES = {
   USER_LOCK: "USER_LOCK",
   USER_UNLOCK: "USER_UNLOCK",
   ROLE_READ: "ROLE_READ",
-  PERMISSION_READ: "PERMISSION_READ"
+  PERMISSION_READ: "PERMISSION_READ",
+  PRODUCT_READ: "PRODUCT_READ",
+  PRODUCT_CREATE: "PRODUCT_CREATE",
+  PRODUCT_UPDATE: "PRODUCT_UPDATE",
+  PRODUCT_DELETE: "PRODUCT_DELETE"
 };
 
 const permissionDefinitions = [
@@ -83,6 +87,34 @@ const permissionDefinitions = [
     module: "permissions",
     action: "read",
     description: "Allow viewing system permissions"
+  },
+  {
+    name: "Read Products",
+    code: PERMISSION_CODES.PRODUCT_READ,
+    module: "products",
+    action: "read",
+    description: "Allow viewing the products list and product details"
+  },
+  {
+    name: "Create Products",
+    code: PERMISSION_CODES.PRODUCT_CREATE,
+    module: "products",
+    action: "create",
+    description: "Allow creating new products"
+  },
+  {
+    name: "Update Products",
+    code: PERMISSION_CODES.PRODUCT_UPDATE,
+    module: "products",
+    action: "update",
+    description: "Allow updating existing products"
+  },
+  {
+    name: "Delete Products",
+    code: PERMISSION_CODES.PRODUCT_DELETE,
+    module: "products",
+    action: "delete",
+    description: "Allow deleting products"
   }
 ];
 
