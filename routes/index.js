@@ -1,5 +1,9 @@
 const express = require("express");
 
+const authRouter = require("./auth");
+const usersRouter = require("./users");
+const rolesRouter = require("./roles");
+const permissionsRouter = require("./permissions");
 const productsRouter = require("./products");
 const purchaseOrdersRouter = require("./purchaseOrders");
 const brandsRouter = require("./brands");
@@ -15,6 +19,10 @@ router.get("/health", (req, res) => {
   });
 });
 
+router.use("/auth", authRouter);
+router.use("/users", usersRouter);
+router.use("/roles", rolesRouter);
+router.use("/permissions", permissionsRouter);
 router.use("/products", productsRouter);
 router.use("/purchase-orders", purchaseOrdersRouter);
 router.use("/brands", brandsRouter);
