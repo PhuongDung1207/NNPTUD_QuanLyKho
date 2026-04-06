@@ -9,6 +9,7 @@ const purchaseOrdersRouter = require("./purchaseOrders");
 const brandsRouter = require("./brands");
 const unitsRouter = require("./units");
 const suppliersRouter = require("./suppliers");
+const batchLotsRouter = require("./batchLots");
 const productVariantsRouter = require("./productVariants");
 
 const router = express.Router();
@@ -29,6 +30,7 @@ router.use("/purchase-orders", purchaseOrdersRouter);
 router.use("/brands", brandsRouter);
 router.use("/units", unitsRouter);
 router.use("/suppliers", suppliersRouter);
+router.use("/batch-lots", batchLotsRouter);
 router.use("/categories", require("./categories"));
 router.use("/warehouses", require("./warehouses"));
 router.use("/product-variants", productVariantsRouter);

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "nodemon ./bin/www",
     "start:prod": "node ./bin/www",
-    "lint:check": "node --check app.js && node --check bin/www && node --check routes/index.js && node --check routes/auth.js && node --check routes/users.js && node --check routes/roles.js && node --check routes/permissions.js && node --check routes/products.js && node --check controllers/auth.js && node --check controllers/users.js && node --check controllers/roles.js && node --check controllers/permissions.js && node --check controllers/products.js && node --check utils/authHandler.js && node --check utils/accessControlBootstrap.js && node --check utils/validator.js"
+    "lint:check": "node --check app.js && node --check bin/www && node --check routes/index.js && node --check routes/auth.js && node --check routes/users.js && node --check routes/roles.js && node --check routes/permissions.js && node --check routes/products.js && node --check routes/purchaseOrders.js && node --check routes/batchLots.js && node --check controllers/auth.js && node --check controllers/users.js && node --check controllers/roles.js && node --check controllers/permissions.js && node --check controllers/products.js && node --check controllers/purchaseOrders.js && node --check controllers/batchLots.js && node --check utils/authHandler.js && node --check utils/accessControlBootstrap.js && node --check utils/validator.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

@@ -195,6 +195,14 @@ svg {
   flex: 1;
 }
 
+.sidebar-user-meta strong,
+.sidebar-user-meta span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .user-dot {
   width: 36px;
   height: 36px;

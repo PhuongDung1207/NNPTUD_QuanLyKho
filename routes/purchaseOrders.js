@@ -8,7 +8,10 @@ const {
   mongoIdParamRule,
   purchaseOrderListRules,
   purchaseOrderCreateRules,
-  purchaseOrderUpdateRules
+  purchaseOrderUpdateRules,
+  purchaseOrderPartialReceiveRules,
+  purchaseOrderReceiveRules,
+  batchLotReceiveItemRules
 } = require("../utils/validator");
 
 const router = express.Router();
@@ -98,11 +101,29 @@ router.post(
 );
 
 router.post(
-  "/:id/receive",
+  "/:id/receive-partial",
   mongoIdParamRule("id"),
+  purchaseOrderPartialReceiveRules,
+  batchLotReceiveItemRules,
   validate,
   asyncHandler(async (req, res) => {
-    const data = await purchaseOrdersController.receivePurchaseOrder(req.params.id, req.user);
+    const data = await purchaseOrdersController.receivePurchaseOrderPartially(req.params.id, req.body, req.user);
+
+    res.json({
+      message: "Purchase order partially received successfully",
+      data
+    });
+  })
+);
+
+router.post(
+  "/:id/receive",
+  mongoIdParamRule("id"),
+  purchaseOrderReceiveRules,
+  batchLotReceiveItemRules,
+  validate,
+  asyncHandler(async (req, res) => {
+    const data = await purchaseOrdersController.receivePurchaseOrder(req.params.id, req.body, req.user);
 
     res.json({
       message: "Purchase order received successfully",
