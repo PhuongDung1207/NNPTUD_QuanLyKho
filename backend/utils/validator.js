@@ -5,10 +5,7 @@ const productStatuses = ["draft", "active", "inactive", "discontinued"];
 const userStatuses = ["active", "inactive", "locked"];
 const purchaseOrderStatuses = ["draft", "pending", "approved", "received", "cancelled"];
 const batchLotStatuses = ["available", "blocked", "expired"];
-<<<<<<< HEAD
 const transferOrderStatuses = ["draft", "pending", "in_transit", "completed", "cancelled"];
-=======
->>>>>>> 582796d8fcede6f92a7ca33538938187d128e652
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 64;
 
@@ -44,11 +41,6 @@ function passwordComplexityRule(field, options = {}) {
     .withMessage(`${field} cannot contain spaces`);
 }
 
-<<<<<<< HEAD
-=======
-const transferOrderStatuses = ["draft", "pending", "in_transit", "completed", "cancelled"];
-
->>>>>>> 582796d8fcede6f92a7ca33538938187d128e652
 function isUploadOrHttpUrl(value) {
   if (typeof value !== "string" || !value.trim()) {
     return false;
@@ -631,9 +623,5 @@ module.exports = {
   inventoryUpdateRules,
   transferOrderListRules,
   transferOrderCreateRules,
-<<<<<<< HEAD
   transferOrderUpdateRules
-=======
-  transferOrderUpdateRules,
->>>>>>> 582796d8fcede6f92a7ca33538938187d128e652
 };
