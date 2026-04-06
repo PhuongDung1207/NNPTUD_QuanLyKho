@@ -1,10 +1,11 @@
 const { body, param, query, validationResult } = require("express-validator");
 
+const commonStatuses = ["active", "inactive"];
 const productStatuses = ["draft", "active", "inactive", "discontinued"];
 const userStatuses = ["active", "inactive", "locked"];
 const purchaseOrderStatuses = ["draft", "pending", "approved", "received", "cancelled"];
 const batchLotStatuses = ["available", "blocked", "expired"];
-const commonStatuses = ["active", "inactive"];
+const transferOrderStatuses = ["draft", "pending", "in_transit", "completed", "cancelled"];
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 64;
 
@@ -38,6 +39,25 @@ function passwordComplexityRule(field, options = {}) {
     .bail()
     .matches(/^\S+$/)
     .withMessage(`${field} cannot contain spaces`);
+}
+
+function isUploadOrHttpUrl(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return false;
+  }
+
+  const normalizedValue = value.trim();
+
+  if (normalizedValue.startsWith("/uploads/")) {
+    return true;
+  }
+
+  try {
+    const parsedUrl = new URL(normalizedValue);
+    return ["http:", "https:"].includes(parsedUrl.protocol);
+  } catch (error) {
+    return false;
+  }
 }
 
 function validate(req, res, next) {
@@ -95,7 +115,10 @@ const productCreateRules = [
   body("minStockLevel").optional().isFloat({ min: 0 }).withMessage("minStockLevel must be a non-negative number"),
   body("maxStockLevel").optional().isFloat({ min: 0 }).withMessage("maxStockLevel must be a non-negative number"),
   body("imageUrls").optional().isArray().withMessage("imageUrls must be an array"),
-  body("imageUrls.*").optional().isURL().withMessage("each imageUrls item must be a valid URL"),
+  body("imageUrls.*")
+    .optional()
+    .custom((value) => isUploadOrHttpUrl(value))
+    .withMessage("each imageUrls item must be a valid URL or /uploads path"),
   body("tags").optional().isArray().withMessage("tags must be an array"),
   body("tags.*").optional().isString().withMessage("each tag must be a string")
 ];
@@ -123,7 +146,10 @@ const productUpdateRules = [
   body("minStockLevel").optional().isFloat({ min: 0 }).withMessage("minStockLevel must be a non-negative number"),
   body("maxStockLevel").optional().isFloat({ min: 0 }).withMessage("maxStockLevel must be a non-negative number"),
   body("imageUrls").optional().isArray().withMessage("imageUrls must be an array"),
-  body("imageUrls.*").optional().isURL().withMessage("each imageUrls item must be a valid URL"),
+  body("imageUrls.*")
+    .optional()
+    .custom((value) => isUploadOrHttpUrl(value))
+    .withMessage("each imageUrls item must be a valid URL or /uploads path"),
   body("tags").optional().isArray().withMessage("tags must be an array"),
   body("tags.*").optional().isString().withMessage("each tag must be a string")
 ];
@@ -263,73 +289,173 @@ const brandListRules = [
   query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
   query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
   query("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
-  query("search").optional().isString()
+  query("search").optional().isString().withMessage("search must be a string")
 ];
 
 const brandCreateRules = [
-  body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 160 }),
-  body("code").trim().notEmpty().withMessage("code is required").isLength({ max: 40 }),
-  body("description").optional({ values: "falsy" }).isLength({ max: 1000 }),
-  body("countryOfOrigin").optional({ values: "falsy" }).isLength({ max: 120 }),
-  body("status").optional().isIn(commonStatuses)
+  body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 160 }).withMessage("name must be at most 160 characters"),
+  body("code").trim().notEmpty().withMessage("code is required").isLength({ max: 40 }).withMessage("code must be at most 40 characters"),
+  body("description").optional({ values: "falsy" }).isLength({ max: 1000 }).withMessage("description must be at most 1000 characters"),
+  body("countryOfOrigin").optional({ values: "falsy" }).isLength({ max: 120 }).withMessage("countryOfOrigin must be at most 120 characters"),
+  body("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`)
 ];
 
 const brandUpdateRules = [
-  body("name").optional().trim().notEmpty().withMessage("name cannot be empty").isLength({ max: 160 }),
-  body("code").optional().trim().notEmpty().withMessage("code cannot be empty").isLength({ max: 40 }),
-  body("description").optional({ values: "falsy" }).isLength({ max: 1000 }),
-  body("countryOfOrigin").optional({ values: "falsy" }).isLength({ max: 120 }),
-  body("status").optional().isIn(commonStatuses)
+  body("name").optional().trim().notEmpty().withMessage("name cannot be empty").isLength({ max: 160 }).withMessage("name must be at most 160 characters"),
+  body("code").optional().trim().notEmpty().withMessage("code cannot be empty").isLength({ max: 40 }).withMessage("code must be at most 40 characters"),
+  body("description").optional({ values: "falsy" }).isLength({ max: 1000 }).withMessage("description must be at most 1000 characters"),
+  body("countryOfOrigin").optional({ values: "falsy" }).isLength({ max: 120 }).withMessage("countryOfOrigin must be at most 120 characters"),
+  body("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`)
 ];
 
 const unitListRules = [
-  query("page").optional().isInt({ min: 1 }),
-  query("limit").optional().isInt({ min: 1, max: 100 }),
-  query("status").optional().isIn(commonStatuses),
-  query("search").optional().isString()
+  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
+  query("search").optional().isString().withMessage("search must be a string")
 ];
 
 const unitCreateRules = [
-  body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 80 }),
-  body("code").trim().notEmpty().withMessage("code is required").isLength({ max: 30 }),
-  body("symbol").optional({ values: "falsy" }).isLength({ max: 20 }),
-  body("precision").optional().isInt({ min: 0, max: 6 }),
-  body("status").optional().isIn(commonStatuses)
+  body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 80 }).withMessage("name must be at most 80 characters"),
+  body("code").trim().notEmpty().withMessage("code is required").isLength({ max: 30 }).withMessage("code must be at most 30 characters"),
+  body("symbol").optional({ values: "falsy" }).isLength({ max: 20 }).withMessage("symbol must be at most 20 characters"),
+  body("precision").optional().isInt({ min: 0, max: 6 }).withMessage("precision must be between 0 and 6"),
+  body("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`)
 ];
 
 const unitUpdateRules = [
-  body("name").optional().trim().notEmpty().isLength({ max: 80 }),
-  body("code").optional().trim().notEmpty().isLength({ max: 30 }),
-  body("symbol").optional({ values: "falsy" }).isLength({ max: 20 }),
-  body("precision").optional().isInt({ min: 0, max: 6 }),
-  body("status").optional().isIn(commonStatuses)
+  body("name").optional().trim().notEmpty().withMessage("name cannot be empty").isLength({ max: 80 }).withMessage("name must be at most 80 characters"),
+  body("code").optional().trim().notEmpty().withMessage("code cannot be empty").isLength({ max: 30 }).withMessage("code must be at most 30 characters"),
+  body("symbol").optional({ values: "falsy" }).isLength({ max: 20 }).withMessage("symbol must be at most 20 characters"),
+  body("precision").optional().isInt({ min: 0, max: 6 }).withMessage("precision must be between 0 and 6"),
+  body("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`)
 ];
 
 const supplierListRules = [
-  query("page").optional().isInt({ min: 1 }),
-  query("limit").optional().isInt({ min: 1, max: 100 }),
-  query("status").optional().isIn(commonStatuses),
-  query("search").optional().isString()
+  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
+  query("search").optional().isString().withMessage("search must be a string")
 ];
 
 const supplierCreateRules = [
-  body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 160 }),
-  body("code").trim().notEmpty().withMessage("code is required").isLength({ max: 40 }),
-  body("contactName").optional({ values: "falsy" }).isLength({ max: 120 }),
-  body("phone").optional({ values: "falsy" }).isLength({ max: 20 }),
-  body("email").optional({ values: "falsy" }).isEmail().withMessage("Invalid email").isLength({ max: 160 }),
-  body("taxCode").optional({ values: "falsy" }).isLength({ max: 40 }),
-  body("status").optional().isIn(commonStatuses)
+  body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 160 }).withMessage("name must be at most 160 characters"),
+  body("code").trim().notEmpty().withMessage("code is required").isLength({ max: 40 }).withMessage("code must be at most 40 characters"),
+  body("contactName").optional({ values: "falsy" }).isLength({ max: 120 }).withMessage("contactName must be at most 120 characters"),
+  body("phone").optional({ values: "falsy" }).isLength({ max: 20 }).withMessage("phone must be at most 20 characters"),
+  body("email").optional({ values: "falsy" }).isEmail().withMessage("email must be valid").isLength({ max: 160 }).withMessage("email must be at most 160 characters"),
+  body("taxCode").optional({ values: "falsy" }).isLength({ max: 40 }).withMessage("taxCode must be at most 40 characters"),
+  body("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`)
 ];
 
 const supplierUpdateRules = [
-  body("name").optional().trim().notEmpty().isLength({ max: 160 }),
-  body("code").optional().trim().notEmpty().isLength({ max: 40 }),
-  body("contactName").optional({ values: "falsy" }).isLength({ max: 120 }),
-  body("phone").optional({ values: "falsy" }).isLength({ max: 20 }),
-  body("email").optional({ values: "falsy" }).isEmail().isLength({ max: 160 }),
-  body("taxCode").optional({ values: "falsy" }).isLength({ max: 40 }),
-  body("status").optional().isIn(commonStatuses)
+  body("name").optional().trim().notEmpty().withMessage("name cannot be empty").isLength({ max: 160 }).withMessage("name must be at most 160 characters"),
+  body("code").optional().trim().notEmpty().withMessage("code cannot be empty").isLength({ max: 40 }).withMessage("code must be at most 40 characters"),
+  body("contactName").optional({ values: "falsy" }).isLength({ max: 120 }).withMessage("contactName must be at most 120 characters"),
+  body("phone").optional({ values: "falsy" }).isLength({ max: 20 }).withMessage("phone must be at most 20 characters"),
+  body("email").optional({ values: "falsy" }).isEmail().withMessage("email must be valid").isLength({ max: 160 }).withMessage("email must be at most 160 characters"),
+  body("taxCode").optional({ values: "falsy" }).isLength({ max: 40 }).withMessage("taxCode must be at most 40 characters"),
+  body("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`)
+];
+
+const warehouseListRules = [
+  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
+  query("manager").optional().isMongoId().withMessage("manager must be a valid ObjectId"),
+  query("search").optional().isString().withMessage("search must be a string")
+];
+
+const warehouseCreateRules = [
+  body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 160 }).withMessage("name must be at most 160 characters"),
+  body("code").trim().notEmpty().withMessage("code is required").isLength({ max: 40 }).withMessage("code must be at most 40 characters"),
+  body("description").optional({ values: "falsy" }).isLength({ max: 800 }).withMessage("description must be at most 800 characters"),
+  body("manager").optional({ values: "falsy" }).isMongoId().withMessage("manager must be a valid ObjectId"),
+  body("contactPhone").optional({ values: "falsy" }).isLength({ max: 20 }).withMessage("contactPhone must be at most 20 characters"),
+  body("contactEmail").optional({ values: "falsy" }).isEmail().withMessage("contactEmail must be valid").isLength({ max: 160 }).withMessage("contactEmail must be at most 160 characters"),
+  body("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`)
+];
+
+const warehouseUpdateRules = [
+  body("name").optional().trim().notEmpty().withMessage("name cannot be empty").isLength({ max: 160 }).withMessage("name must be at most 160 characters"),
+  body("code").optional().trim().notEmpty().withMessage("code cannot be empty").isLength({ max: 40 }).withMessage("code must be at most 40 characters"),
+  body("description").optional({ values: "falsy" }).isLength({ max: 800 }).withMessage("description must be at most 800 characters"),
+  body("manager").optional({ values: "falsy" }).isMongoId().withMessage("manager must be a valid ObjectId"),
+  body("contactPhone").optional({ values: "falsy" }).isLength({ max: 20 }).withMessage("contactPhone must be at most 20 characters"),
+  body("contactEmail").optional({ values: "falsy" }).isEmail().withMessage("contactEmail must be valid").isLength({ max: 160 }).withMessage("contactEmail must be at most 160 characters"),
+  body("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`)
+];
+
+const inventoryListRules = [
+  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("warehouse").optional().isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  query("product").optional().isMongoId().withMessage("product must be a valid ObjectId"),
+  query("lowStock").optional().isBoolean().withMessage("lowStock must be true or false"),
+  query("belowMinStock").optional().isBoolean().withMessage("belowMinStock must be true or false")
+];
+
+const inventoryCreateRules = [
+  body("warehouse").notEmpty().withMessage("warehouse is required").isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  body("product").notEmpty().withMessage("product is required").isMongoId().withMessage("product must be a valid ObjectId"),
+  body("quantityOnHand").optional().isFloat({ min: 0 }).withMessage("quantityOnHand must be a non-negative number"),
+  body("reservedQuantity").optional().isFloat({ min: 0 }).withMessage("reservedQuantity must be a non-negative number"),
+  body("reorderPoint").optional().isFloat({ min: 0 }).withMessage("reorderPoint must be a non-negative number"),
+  body("minStockLevel").optional().isFloat({ min: 0 }).withMessage("minStockLevel must be a non-negative number"),
+  body("maxStockLevel").optional().isFloat({ min: 0 }).withMessage("maxStockLevel must be a non-negative number"),
+  body("openingNote").optional({ values: "falsy" }).isLength({ max: 500 }).withMessage("openingNote must be at most 500 characters")
+];
+
+const inventoryUpdateRules = [
+  body("quantityOnHand").optional().isFloat({ min: 0 }).withMessage("quantityOnHand must be a non-negative number"),
+  body("reservedQuantity").optional().isFloat({ min: 0 }).withMessage("reservedQuantity must be a non-negative number"),
+  body("reorderPoint").optional().isFloat({ min: 0 }).withMessage("reorderPoint must be a non-negative number"),
+  body("minStockLevel").optional().isFloat({ min: 0 }).withMessage("minStockLevel must be a non-negative number"),
+  body("maxStockLevel").optional().isFloat({ min: 0 }).withMessage("maxStockLevel must be a non-negative number"),
+  body("adjustmentNote").optional({ values: "falsy" }).isLength({ max: 500 }).withMessage("adjustmentNote must be at most 500 characters")
+];
+
+const transferOrderListRules = [
+  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional().isIn(transferOrderStatuses).withMessage(`status must be one of: ${transferOrderStatuses.join(", ")}`),
+  query("fromWarehouse").optional().isMongoId().withMessage("fromWarehouse must be a valid ObjectId"),
+  query("toWarehouse").optional().isMongoId().withMessage("toWarehouse must be a valid ObjectId"),
+  query("code").optional().trim().isLength({ min: 1, max: 40 }).withMessage("code must be between 1 and 40 characters")
+];
+
+const transferOrderCreateRules = [
+  body("code").optional({ values: "falsy" }).trim().isLength({ max: 40 }).withMessage("code must be at most 40 characters"),
+  body("fromWarehouse").notEmpty().withMessage("fromWarehouse is required").isMongoId().withMessage("fromWarehouse must be a valid ObjectId"),
+  body("toWarehouse")
+    .notEmpty()
+    .withMessage("toWarehouse is required")
+    .isMongoId()
+    .withMessage("toWarehouse must be a valid ObjectId")
+    .custom((value, { req }) => value !== req.body.fromWarehouse)
+    .withMessage("toWarehouse must be different from fromWarehouse"),
+  body("note").optional({ values: "falsy" }).isLength({ max: 1000 }).withMessage("note must be at most 1000 characters"),
+  body("items").isArray({ min: 1 }).withMessage("items must be a non-empty array"),
+  body("items.*.product").notEmpty().withMessage("product is required").isMongoId().withMessage("product must be a valid ObjectId"),
+  body("items.*.quantityRequested").notEmpty().withMessage("quantityRequested is required").isFloat({ gt: 0 }).withMessage("quantityRequested must be greater than 0"),
+  body("items.*.note").optional({ values: "falsy" }).isLength({ max: 500 }).withMessage("item note must be at most 500 characters")
+];
+
+const transferOrderUpdateRules = [
+  body("code").optional({ values: "falsy" }).trim().isLength({ max: 40 }).withMessage("code must be at most 40 characters"),
+  body("fromWarehouse").notEmpty().withMessage("fromWarehouse is required").isMongoId().withMessage("fromWarehouse must be a valid ObjectId"),
+  body("toWarehouse")
+    .notEmpty()
+    .withMessage("toWarehouse is required")
+    .isMongoId()
+    .withMessage("toWarehouse must be a valid ObjectId")
+    .custom((value, { req }) => value !== req.body.fromWarehouse)
+    .withMessage("toWarehouse must be different from fromWarehouse"),
+  body("note").optional({ values: "falsy" }).isLength({ max: 1000 }).withMessage("note must be at most 1000 characters"),
+  body("items").isArray({ min: 1 }).withMessage("items must be a non-empty array"),
+  body("items.*.product").notEmpty().withMessage("product is required").isMongoId().withMessage("product must be a valid ObjectId"),
+  body("items.*.quantityRequested").notEmpty().withMessage("quantityRequested is required").isFloat({ gt: 0 }).withMessage("quantityRequested must be greater than 0"),
+  body("items.*.note").optional({ values: "falsy" }).isLength({ max: 500 }).withMessage("item note must be at most 500 characters")
 ];
 
 const purchaseOrderPartialReceiveRules = [
@@ -488,5 +614,14 @@ module.exports = {
   batchLotCreateRules,
   batchLotUpdateRules,
   batchLotStatusRules,
-  batchLotReceiveItemRules
+  batchLotReceiveItemRules,
+  warehouseListRules,
+  warehouseCreateRules,
+  warehouseUpdateRules,
+  inventoryListRules,
+  inventoryCreateRules,
+  inventoryUpdateRules,
+  transferOrderListRules,
+  transferOrderCreateRules,
+  transferOrderUpdateRules
 };

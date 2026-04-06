@@ -34,6 +34,8 @@ router.use("/suppliers", suppliersRouter);
 router.use("/batch-lots", batchLotsRouter);
 router.use("/categories", require("./categories"));
 router.use("/warehouses", require("./warehouses"));
+router.use("/inventories", require("./inventories"));
+router.use("/transfer-orders", require("./transferOrders"));
 router.use("/product-variants", productVariantsRouter);
 router.use("/messages", messagesRouter);
 
