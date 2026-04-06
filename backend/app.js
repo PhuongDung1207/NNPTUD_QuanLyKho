@@ -66,7 +66,7 @@ app.use((error, req, res, next) => {
 
   // Handle Mongoose Duplication Errors (e.g., unique code)
   if (error.code === 11000) {
-    const field = Object.keys(error.keyPattern)[0];
+    const field = Object.keys(error.keyPattern || {})[0];
     return res.status(409).json({
       success: false,
       message: `${field === 'code' ? 'Mã hiệu' : field} đã tồn tại trong hệ thống`,
