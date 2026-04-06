@@ -1,30 +1,14 @@
 {
-  "name": "nnptud-quan-ly-kho",
-  "version": "1.0.0",
+  "name": "nnptud-quan-ly-kho-root",
   "private": true,
-  "description": "Warehouse management backend scaffold following the provided Express + MongoDB flow.",
-  "main": "bin/www",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "start": "nodemon ./bin/www",
-    "start:prod": "node ./bin/www",
-    "lint:check": "node --check app.js && node --check bin/www && node --check routes/index.js && node --check routes/auth.js && node --check routes/users.js && node --check routes/roles.js && node --check routes/permissions.js && node --check routes/products.js && node --check routes/purchaseOrders.js && node --check routes/batchLots.js && node --check controllers/auth.js && node --check controllers/users.js && node --check controllers/roles.js && node --check controllers/permissions.js && node --check controllers/products.js && node --check controllers/purchaseOrders.js && node --check controllers/batchLots.js && node --check utils/authHandler.js && node --check utils/accessControlBootstrap.js && node --check utils/validator.js"
-  },
-  "dependencies": {
-    "bcryptjs": "^3.0.2",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.2",
-    "express-validator": "^7.2.1",
-    "http-errors": "^2.0.0",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.12.1",
-    "morgan": "^1.10.0",
-    "multer": "^2.0.0",
-    "nodemailer": "^6.10.1",
-    "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.10"
+    "dev:backend": "cd backend && npm run start",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
   }
 }
