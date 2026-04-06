@@ -1,8 +1,10 @@
+const path = require("path");
 const express = require("express");
 const { requireAuth, authorizePermissions } = require("../utils/authHandler");
 const { PERMISSION_CODES } = require("../utils/accessControlBootstrap");
 const productsController = require("../controllers/products");
 const asyncHandler = require("../utils/asyncHandler");
+const { createDiskUpload, IMAGE_MIME_TYPES } = require("../utils/uploadHandler");
 const {
   validate,
   mongoIdParamRule,
@@ -12,6 +14,10 @@ const {
 } = require("../utils/validator");
 
 const router = express.Router();
+const productImageUpload = createDiskUpload({
+  destination: path.join(__dirname, "..", "public", "uploads", "products"),
+  allowedMimeTypes: IMAGE_MIME_TYPES
+});
 
 // GET / - Public to support dashboard stats for anonymous users
 router.get(
@@ -34,6 +40,21 @@ router.get(
 
     res.json({
       message: "Product fetched successfully",
+      data
+    });
+  })
+);
+
+router.post(
+  "/upload-images",
+  productImageUpload.array("images", 5),
+  asyncHandler(async (req, res) => {
+    const data = await productsController.uploadProductImages(req.files, {
+      origin: `${req.protocol}://${req.get("host")}`
+    });
+
+    res.status(201).json({
+      message: "Product images uploaded successfully",
       data
     });
   })

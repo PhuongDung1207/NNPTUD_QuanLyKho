@@ -31,6 +31,11 @@ function cleanUndefined(payload) {
   return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined));
 }
 
+function buildPublicFileUrl(origin, pathname) {
+  const normalizedOrigin = String(origin || "").replace(/\/$/, "");
+  return normalizedOrigin ? `${normalizedOrigin}${pathname}` : pathname;
+}
+
 function parseDuplicateKey(error) {
   const field = Object.keys(error.keyPattern || {})[0] || "field";
 
@@ -198,17 +203,24 @@ async function listProducts(filters = {}) {
   };
 }
 
-async function getProductById(id) {
-  const product = await Product.findOne({
+async function getProductById(id, session = null) {
+  const productQuery = Product.findOne({
     _id: id,
     deletedAt: null
   }).populate(productPopulate);
 
+  const inventoriesQuery = Inventory.find({ product: id }).populate("warehouse", "name code contactPhone contactEmail");
+
+  if (session) {
+    productQuery.session(session);
+    inventoriesQuery.session(session);
+  }
+
+  const [product, inventories] = await Promise.all([productQuery, inventoriesQuery]);
+
   if (!product) {
     throw createError(404, "Product not found");
   }
-
-  const inventories = await Inventory.find({ product: product._id }).populate("warehouse", "name code contactPhone contactEmail");
 
   return {
     product,
@@ -216,7 +228,27 @@ async function getProductById(id) {
   };
 }
 
+async function uploadProductImages(files, options = {}) {
+  if (!Array.isArray(files) || !files.length) {
+    throw createError(400, "At least one image file is required");
+  }
+
+  return files.map((file) => {
+    const filePath = `/uploads/products/${file.filename}`;
+
+    return {
+      filename: file.filename,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      path: filePath,
+      url: buildPublicFileUrl(options.origin, filePath)
+    };
+  });
+}
+
 async function updateProductById(id, payload) {
+  const session = await mongoose.startSession();
   const {
     warehouse,
     reorderPoint,
@@ -225,22 +257,24 @@ async function updateProductById(id, payload) {
     ...productPayload
   } = payload;
 
-  const product = await Product.findOne({
-    _id: id,
-    deletedAt: null
-  });
-
-  if (!product) {
-    throw createError(404, "Product not found");
-  }
-
   try {
+    session.startTransaction();
+
+    const product = await Product.findOne({
+      _id: id,
+      deletedAt: null
+    }).session(session);
+
+    if (!product) {
+      throw createError(404, "Product not found");
+    }
+
     await validateProductReferences(
       {
         ...productPayload,
         warehouse
       },
-      null
+      session
     );
 
     Object.assign(
@@ -252,7 +286,7 @@ async function updateProductById(id, payload) {
       })
     );
 
-    await product.save();
+    await product.save({ session });
 
     const hasInventorySettings =
       reorderPoint !== undefined || minStockLevel !== undefined || maxStockLevel !== undefined;
@@ -266,7 +300,7 @@ async function updateProductById(id, payload) {
         inventoryQuery.warehouse = warehouse;
       }
 
-      const inventory = await Inventory.findOne(inventoryQuery);
+      const inventory = await Inventory.findOne(inventoryQuery).session(session);
 
       if (!inventory) {
         throw createError(404, "Inventory not found for product");
@@ -281,16 +315,24 @@ async function updateProductById(id, payload) {
         })
       );
 
-      await inventory.save();
+      await inventory.save({ session });
     }
 
-    return getProductById(product._id);
+    const data = await getProductById(product._id, session);
+
+    await session.commitTransaction();
+
+    return data;
   } catch (error) {
+    await session.abortTransaction();
+
     if (error?.code === 11000) {
       throw createError(409, parseDuplicateKey(error));
     }
 
     throw error;
+  } finally {
+    await session.endSession();
   }
 }
 
@@ -316,6 +358,7 @@ module.exports = {
   createProductWithInventory,
   listProducts,
   getProductById,
+  uploadProductImages,
   updateProductById,
   archiveProductById
 };

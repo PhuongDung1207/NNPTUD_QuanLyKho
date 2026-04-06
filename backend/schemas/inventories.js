@@ -56,6 +56,14 @@ const inventorySchema = new mongoose.Schema(
 
 inventorySchema.index({ product: 1, warehouse: 1 }, { unique: true });
 
+inventorySchema.pre("validate", function validateReservedQuantity(next) {
+  if (this.reservedQuantity > this.quantityOnHand) {
+    return next(new Error("reservedQuantity cannot be greater than quantityOnHand"));
+  }
+
+  return next();
+});
+
 inventorySchema.pre("save", function syncAvailableQuantity(next) {
   this.availableQuantity = Math.max(this.quantityOnHand - this.reservedQuantity, 0);
   return next();

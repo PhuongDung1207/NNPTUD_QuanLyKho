@@ -9,6 +9,26 @@
     "dev:backend": "cd backend && npm run start",
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "npm run dev:backend & npm run dev:frontend",
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "start": "node backend/bin/www",
+    "start:prod": "node backend/bin/www",
+    "lint:check": "node --check backend/app.js && node --check backend/bin/www && node --check backend/routes/index.js && node --check backend/routes/products.js && node --check backend/routes/purchaseOrders.js && node --check backend/routes/warehouses.js && node --check backend/routes/inventories.js && node --check backend/routes/transferOrders.js && node --check backend/controllers/products.js && node --check backend/controllers/purchaseOrders.js && node --check backend/controllers/warehouses.js && node --check backend/controllers/inventories.js && node --check backend/controllers/transferOrders.js && node --check backend/schemas/inventories.js && node --check backend/utils/validator.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-validator": "^7.2.1",
+    "http-errors": "^2.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.12.1",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.0",
+    "nodemailer": "^6.10.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }
