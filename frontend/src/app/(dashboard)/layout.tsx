@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import Sidebar from '@/components/layout/Sidebar';
@@ -14,18 +14,23 @@ export default function DashboardLayout({
 }) {
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Basic Client-side Auth Check
-    if (!isAuthenticated) {
+    if (mounted && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [mounted, isAuthenticated, router]);
 
-  if (!isAuthenticated) {
+  if (!mounted || !isAuthenticated) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-50 text-gray-500">
-        Authenticating...
+        <div className="animate-pulse">Loading dashboard...</div>
       </div>
     );
   }

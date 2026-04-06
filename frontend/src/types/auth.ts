@@ -22,6 +22,7 @@ export interface User {
   role: string | Role;
   status: 'active' | 'inactive' | 'locked';
   avatarUrl?: string;
+  phone?: string;
 }
 
 export interface AuthResponse {

@@ -87,12 +87,18 @@ async function sendActivationEmail({ user, token, appBaseUrl }) {
     </div>
   `;
 
-  await sendMail({
-    to: user.email,
-    subject,
-    text,
-    html
-  });
+  try {
+    await sendMail({
+      to: user.email,
+      subject,
+      text,
+      html
+    });
+  } catch (err) {
+    console.error(`\n[MAILER WARNING] Could not send activation email to ${user.email}`);
+    console.error(`[MAILER ERROR] ${err.message}`);
+    console.error(`[ACTIVATION URL] Please use this link to activate the account manually:\n${activationUrl}\n`);
+  }
 
   return activationUrl;
 }

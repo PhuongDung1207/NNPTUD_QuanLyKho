@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Role } from '@/types/auth';
+import { useState } from 'react';
+import UserProfileModal from '@/components/users/UserProfileModal';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -33,6 +35,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Helper to safely get username
   const getUsernameInitial = () => {
@@ -81,7 +84,11 @@ export default function Sidebar() {
       </div>
 
       <div className="border-t border-slate-800 p-4">
-        <div className="mb-4 flex items-center space-x-3 px-2">
+        <div 
+          onClick={() => setIsProfileModalOpen(true)}
+          className="mb-4 flex items-center space-x-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors"
+          title="Edit Profile"
+        >
           <div className="h-9 w-9 rounded-full bg-blue-500 flex items-center justify-center font-bold">
             {getUsernameInitial()}
           </div>
@@ -100,6 +107,12 @@ export default function Sidebar() {
           <span>Sign out</span>
         </button>
       </div>
+
+      <UserProfileModal 
+        isOpen={isProfileModalOpen} 
+        onClose={() => setIsProfileModalOpen(false)} 
+        user={user}
+      />
     </div>
   );
 }

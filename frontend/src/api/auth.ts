@@ -15,3 +15,13 @@ export const logout = async (): Promise<{ success: boolean }> => {
   const { data } = await axiosInstance.post<{ success: boolean }>('/auth/logout');
   return data;
 };
+
+export const getActivationPreview = async (token: string): Promise<{ data: any; message?: string }> => {
+  const { data } = await axiosInstance.get<{ data: any; message?: string }>(`/auth/activate-account?token=${encodeURIComponent(token)}`);
+  return data;
+};
+
+export const activateAccount = async (payload: { token: string; password: string }): Promise<{ success: boolean; message: string }> => {
+  const { data } = await axiosInstance.post<{ success: boolean; message: string }>('/auth/activate-account', payload);
+  return data;
+};
