@@ -12,7 +12,8 @@ import {
   Tag,
   Layers,
   Building2,
-  Box
+  Box,
+  Warehouse
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Role } from '@/types/auth';
@@ -21,6 +22,7 @@ import UserProfileModal from '@/components/users/UserProfileModal';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Warehouses', href: '/warehouses', icon: Warehouse },
   { name: 'Products', href: '/products', icon: Package },
   { name: 'Batch Lots', href: '/batch-lots', icon: Box },
   { name: 'Categories', href: '/categories', icon: Layers },
