@@ -11,6 +11,7 @@ const {
   Inventory,
   InventoryTransaction
 } = require("../schemas");
+const { withTransaction } = require("../utils/transactionHandler");
 
 const purchaseOrderPopulate = [
   { path: "supplier", select: "name code contactName phone email status" },
@@ -239,12 +240,7 @@ async function replacePurchaseOrderItems(orderId, items, session) {
 }
 
 async function createPurchaseOrder(payload, user) {
-  const session = await mongoose.startSession();
-
-  try {
-    // Tao header va items trong cung mot transaction de du lieu khong bi lech nhau.
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     await validatePurchaseOrderPayloadReferences(payload, session);
 
     const normalizedItems = payload.items.map((item) => buildPurchaseOrderItemPayload(item));
@@ -272,26 +268,19 @@ async function createPurchaseOrder(payload, user) {
       normalizedItems.map((item) => ({
         purchaseOrder: order._id,
         ...item
-        })),
+      })),
       { session }
     );
 
     const data = await getPurchaseOrderDetail(order._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-
+  }).catch((error) => {
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
-
     throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function listPurchaseOrders(filters = {}) {
@@ -339,12 +328,7 @@ async function getPurchaseOrderById(id) {
 }
 
 async function updatePurchaseOrderById(id, payload) {
-  const session = await mongoose.startSession();
-
-  try {
-    // Chi cho phep sua khi phieu con o draft de giu dung workflow duyet/nhan.
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     const order = await PurchaseOrder.findById(id).session(session);
 
     if (!order) {
@@ -379,20 +363,13 @@ async function updatePurchaseOrderById(id, payload) {
 
     const data = await getPurchaseOrderDetail(order._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-
+  }).catch((error) => {
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
-
     throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function submitPurchaseOrder(id) {
@@ -520,12 +497,7 @@ async function validateReceiveItemsBelongToOrder(orderId, session) {
 }
 
 async function receivePurchaseOrderPartially(id, payload, user) {
-  const session = await mongoose.startSession();
-
-  try {
-    // Nhan mot phan se cap nhat receivedQuantity tung dong va ton kho theo dot nhan.
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     const order = await PurchaseOrder.findById(id).session(session);
 
     if (!order) {
@@ -590,29 +562,17 @@ async function receivePurchaseOrderPartially(id, payload, user) {
 
     const data = await getPurchaseOrderDetail(order._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-
+  }).catch((error) => {
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
-
     throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function receivePurchaseOrder(id, payload, user) {
-  const session = await mongoose.startSession();
-
-  try {
-    // Nhan hang se dong bo item, ton kho va lich su giao dich trong mot transaction.
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     const order = await PurchaseOrder.findById(id).session(session);
 
     if (!order) {
@@ -664,20 +624,13 @@ async function receivePurchaseOrder(id, payload, user) {
 
     const data = await getPurchaseOrderDetail(order._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-
+  }).catch((error) => {
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
-
     throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function cancelPurchaseOrder(id) {

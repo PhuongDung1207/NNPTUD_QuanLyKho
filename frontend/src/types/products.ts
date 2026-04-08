@@ -39,7 +39,8 @@ export interface Product {
 }
 
 export interface ProductListResponse {
-  success: boolean;
+  success?: boolean;
+  message?: string;
   data: {
     docs: Product[];
     totalDocs: number;

@@ -11,6 +11,7 @@ const {
   Supplier,
   Unit
 } = require("../schemas");
+const { withTransaction } = require("../utils/transactionHandler");
 
 const productPopulate = [
   { path: "category", select: "name code slug" },
@@ -249,7 +250,6 @@ async function uploadProductImages(files, options = {}) {
 }
 
 async function updateProductById(id, payload) {
-  const session = await mongoose.startSession();
   const {
     warehouse,
     reorderPoint,
@@ -258,9 +258,7 @@ async function updateProductById(id, payload) {
     ...productPayload
   } = payload;
 
-  try {
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     const product = await Product.findOne({
       _id: id,
       deletedAt: null
@@ -321,20 +319,13 @@ async function updateProductById(id, payload) {
 
     const data = await getProductById(product._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-
+  }).catch((error) => {
     if (error?.code === 11000) {
       throw createError(409, parseDuplicateKey(error));
     }
-
     throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function archiveProductById(id) {

@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const createError = require("http-errors");
 
 const { Inventory, Product, Warehouse, InventoryTransaction } = require("../schemas");
+const { withTransaction } = require("../utils/transactionHandler");
 
 const inventoryPopulate = [
   { path: "warehouse", select: "name code status contactPhone contactEmail" },
@@ -106,7 +107,6 @@ async function getInventoryById(id, session = null) {
 }
 
 async function createInventory(payload, user) {
-  const session = await mongoose.startSession();
   const nextQuantityOnHand = Number(payload.quantityOnHand || 0);
   const nextReservedQuantity = Number(payload.reservedQuantity || 0);
 
@@ -114,9 +114,7 @@ async function createInventory(payload, user) {
     throw createError(400, "reservedQuantity cannot be greater than quantityOnHand");
   }
 
-  try {
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     await Promise.all([
       assertReferenceExists(Product, payload.product, "product", session),
       assertReferenceExists(Warehouse, payload.warehouse, "warehouse", session)
@@ -158,28 +156,17 @@ async function createInventory(payload, user) {
 
     const data = await getInventoryById(inventory._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-
+  }).catch((error) => {
     if (error?.code === 11000) {
       throw createError(409, parseDuplicateKey(error));
     }
-
     throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function updateInventoryById(id, payload, user) {
-  const session = await mongoose.startSession();
-
-  try {
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     const inventory = await Inventory.findById(id).session(session);
 
     if (!inventory) {
@@ -234,15 +221,8 @@ async function updateInventoryById(id, payload, user) {
 
     const data = await getInventoryById(inventory._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 module.exports = {

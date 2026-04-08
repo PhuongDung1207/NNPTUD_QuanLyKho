@@ -45,6 +45,9 @@ export default function UnitsPage() {
     u.code.toLowerCase().includes(search.toLowerCase())
   );
 
+  const activeUnits = filteredUnits.filter(u => u.status === 'active');
+  const inactiveUnits = filteredUnits.filter(u => u.status !== 'active');
+
   // Mutations
   const mutationCreate = useMutation({
     mutationFn: createUnit,
@@ -142,80 +145,133 @@ export default function UnitsPage() {
           </div>
         </div>
 
-        {/* Units Table */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="bg-gray-50/50 text-slate-500 font-semibold uppercase text-[11px] tracking-wider border-b border-gray-100">
-                <th className="px-6 py-4">Tên đơn vị</th>
-                <th className="px-6 py-4 text-center">Mã (Code)</th>
-                <th className="px-6 py-4">Mô tả</th>
-                <th className="px-6 py-4 text-center">Trạng thái</th>
-                <th className="px-6 py-4 text-right">Hành động</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {isLoading ? (
-                Array(5).fill(0).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td colSpan={5} className="px-6 py-4 h-16 bg-gray-50/20" />
-                  </tr>
-                ))
-              ) : filteredUnits.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Không tìm thấy đơn vị nào.</td>
+        {/* Units Tables */}
+        <div className="space-y-8 pb-20">
+          {/* Active Units */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between bg-slate-50/30">
+              <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-emerald-500" />
+                Đang hoạt động ({activeUnits.length})
+              </h3>
+            </div>
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="bg-gray-50/50 text-slate-500 font-semibold uppercase text-[11px] tracking-wider border-b border-gray-100">
+                  <th className="px-6 py-4">Tên đơn vị</th>
+                  <th className="px-6 py-4 text-center">Mã (Code)</th>
+                  <th className="px-6 py-4">Mô tả</th>
+                  <th className="px-6 py-4 text-center">Trạng thái</th>
+                  <th className="px-6 py-4 text-right">Hành động</th>
                 </tr>
-              ) : (
-                filteredUnits.map((unit) => (
-                  <tr key={unit._id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 font-bold text-xs">
-                          {unit.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="font-bold text-slate-800">{unit.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <code className="px-2 py-1 bg-slate-100 rounded text-slate-600 font-mono text-xs">{unit.code}</code>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 truncate max-w-[200px]">
-                      {unit.description || '---'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border transition-colors ${
-                        unit.status === 'active' 
-                          ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                          : 'bg-slate-50 text-slate-500 border-slate-100'
-                      }`}>
-                        {unit.status === 'active' ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                        {unit.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleEdit(unit)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if(window.confirm('Xóa đơn vị này?')) mutationDelete.mutate(unit._id);
-                          }}
-                          className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {isLoading ? (
+                  Array(3).fill(0).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td colSpan={5} className="px-6 py-4 h-16 bg-gray-50/20" />
+                    </tr>
+                  ))
+                ) : activeUnits.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Không có đơn vị nào đang hoạt động.</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  activeUnits.map((unit) => (
+                    <tr key={unit._id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 font-bold text-xs">
+                            {unit.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-bold text-slate-800">{unit.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <code className="px-2 py-1 bg-slate-100 rounded text-slate-600 font-mono text-xs">{unit.code}</code>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500 truncate max-w-[200px]">
+                        {unit.description || '---'}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-600 border-emerald-100 uppercase">
+                          <CheckCircle2 size={12} /> {unit.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button 
+                            type="button"
+                            onClick={() => handleEdit(unit)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <Edit2 size={16} className="pointer-events-none" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Inactive Units (Archive) */}
+          {inactiveUnits.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 px-2">
+                <div className="h-[1px] flex-1 bg-gray-200"></div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <XCircle size={14} />
+                  Danh sách lưu trữ (Inactive)
+                </h3>
+                <div className="h-[1px] flex-1 bg-gray-200"></div>
+              </div>
+
+              <div className="bg-white/50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden backdrop-blur-sm">
+                <table className="w-full text-sm text-left">
+                  <tbody className="divide-y divide-gray-50">
+                    {inactiveUnits.map((unit) => (
+                      <tr key={unit._id} className="opacity-60 grayscale-[0.5] hover:grayscale-0 transition-all group">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs ring-1 ring-slate-200">
+                              {unit.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="font-bold text-slate-500 line-through decoration-slate-400 decoration-2">{unit.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <code className="px-2 py-1 bg-slate-50 rounded text-slate-400 font-mono text-[10px] line-through">{unit.code}</code>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-slate-400 text-xs line-through italic truncate max-w-[200px]">{unit.description || '---'}</p>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border bg-gray-50 text-gray-400 border-gray-100 uppercase">
+                            <XCircle size={12} /> {unit.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button 
+                              type="button"
+                              onClick={() => handleEdit(unit)}
+                              className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                              <Search size={16} className="pointer-events-none" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
+
       </div>
 
       {/* ── Side Form Section ── */}

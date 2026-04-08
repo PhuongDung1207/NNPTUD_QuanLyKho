@@ -9,6 +9,7 @@ const {
   Inventory,
   InventoryTransaction
 } = require("../schemas");
+const { withTransaction } = require("../utils/transactionHandler");
 
 const transferOrderPopulate = [
   { path: "fromWarehouse", select: "name code status contactPhone contactEmail" },
@@ -144,11 +145,7 @@ async function replaceTransferOrderItems(orderId, items, session) {
 }
 
 async function createTransferOrder(payload, user) {
-  const session = await mongoose.startSession();
-
-  try {
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     await validateTransferOrderReferences(payload, session);
 
     const normalizedItems = payload.items.map((item) => normalizeItem(item));
@@ -177,20 +174,13 @@ async function createTransferOrder(payload, user) {
 
     const data = await getTransferOrderDocument(order._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-
+  }).catch((error) => {
     if (error?.code === 11000) {
       throw createError(409, parseDuplicateKey(error));
     }
-
     throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function listTransferOrders(filters = {}) {
@@ -237,11 +227,7 @@ async function getTransferOrderById(id) {
 }
 
 async function updateTransferOrderById(id, payload) {
-  const session = await mongoose.startSession();
-
-  try {
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     const order = await TransferOrder.findById(id).session(session);
 
     if (!order) {
@@ -271,28 +257,17 @@ async function updateTransferOrderById(id, payload) {
 
     const data = await getTransferOrderDocument(order._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-
+  }).catch((error) => {
     if (error?.code === 11000) {
       throw createError(409, parseDuplicateKey(error));
     }
-
     throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function submitTransferOrder(id) {
-  const session = await mongoose.startSession();
-
-  try {
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     const order = await TransferOrder.findById(id).session(session);
 
     if (!order) {
@@ -332,23 +307,12 @@ async function submitTransferOrder(id) {
 
     const data = await getTransferOrderDocument(order._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function shipTransferOrder(id, user) {
-  const session = await mongoose.startSession();
-
-  try {
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     const order = await TransferOrder.findById(id).session(session);
 
     if (!order) {
@@ -416,23 +380,12 @@ async function shipTransferOrder(id, user) {
 
     const data = await getTransferOrderDocument(order._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function receiveTransferOrder(id, user) {
-  const session = await mongoose.startSession();
-
-  try {
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     const order = await TransferOrder.findById(id).session(session);
 
     if (!order) {
@@ -503,23 +456,12 @@ async function receiveTransferOrder(id, user) {
 
     const data = await getTransferOrderDocument(order._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 async function cancelTransferOrder(id) {
-  const session = await mongoose.startSession();
-
-  try {
-    session.startTransaction();
-
+  return withTransaction(async (session) => {
     const order = await TransferOrder.findById(id).session(session);
 
     if (!order) {
@@ -559,15 +501,8 @@ async function cancelTransferOrder(id) {
 
     const data = await getTransferOrderDocument(order._id, session);
 
-    await session.commitTransaction();
-
     return data;
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    await session.endSession();
-  }
+  });
 }
 
 module.exports = {

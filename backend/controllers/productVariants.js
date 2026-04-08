@@ -17,10 +17,14 @@ async function createVariant(id, payload) {
     throw createError(404, "Product not found");
   }
 
+  // Auto-generate SKU if not provided
+  const sku = payload.sku || `${product.sku}-VAR-${Date.now().toString(36).toUpperCase()}`;
+
   try {
     const variant = await ProductVariant.create({
       product: id,
       ...payload,
+      sku,
       attributes: payload.attributes || {}
     });
 

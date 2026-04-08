@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Box, 
   Search, 
@@ -14,9 +14,11 @@ import {
   MoreVertical,
   Warehouse as WarehouseIcon,
   Package as PackageIcon,
-  RefreshCw
+  RefreshCw,
+  Edit2,
+  Trash2
 } from 'lucide-react';
-import { getBatchLots } from '@/api/batchLots';
+import { getBatchLots, deleteBatchLot } from '@/api/batchLots';
 import { getWarehouses } from '@/api/warehouses';
 import { getProducts } from '@/api/products';
 import { BatchLotStatus } from '@/types/batchLot';
@@ -25,6 +27,7 @@ import { format } from 'date-fns';
 
 export default function BatchLotsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
@@ -40,6 +43,24 @@ export default function BatchLotsPage() {
     queryFn: () => getBatchLots(filters),
   });
 
+  // Mutations
+  const mutationDelete = useMutation({
+    mutationFn: deleteBatchLot,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['batchLots'] });
+      alert('Đã xóa lô hàng thành công!');
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi xóa lô hàng');
+    }
+  });
+
+  const lots =
+    Array.isArray((batchData as any)?.data) ? ((batchData as any).data as any[]) : (batchData as any)?.data?.docs || [];
+
+  const activeLots = lots.filter((l: any) => l.status === 'available' || l.status === 'blocked');
+  const inactiveLots = lots.filter((l: any) => l.status === 'expired' || l.status === 'damaged');
+
   // Fetch filters data
   const { data: warehousesData } = useQuery({
     queryKey: ['warehouses'],
@@ -50,6 +71,8 @@ export default function BatchLotsPage() {
     queryKey: ['products-list'],
     queryFn: () => getProducts({ limit: 100 }),
   });
+
+  const productDocs: Product[] = (productsData as any)?.data?.docs || [];
 
   const getStatusStyle = (status: BatchLotStatus) => {
     switch (status) {
@@ -149,7 +172,7 @@ export default function BatchLotsPage() {
           onChange={(e) => setFilters({ ...filters, product: e.target.value, page: 1 })}
         >
           <option value="">Tất cả sản phẩm</option>
-          {productsData?.data?.docs?.map((p: Product) => (
+          {productDocs.map((p) => (
             <option key={p._id} value={p._id}>
               {p.name}
             </option>
@@ -157,102 +180,156 @@ export default function BatchLotsPage() {
         </select>
       </div>
 
-      {/* Table Section */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="bg-gray-50/60 text-slate-500 font-semibold uppercase text-xs tracking-wider">
-                <th className="px-6 py-4">Mã Lô</th>
-                <th className="px-6 py-4">Sản Phẩm</th>
-                <th className="px-6 py-4">Kho</th>
-                <th className="px-6 py-4 text-center">Số Lượng</th>
-                <th className="px-6 py-4">Hạn Sử Dụng</th>
-                <th className="px-6 py-4">Trạng Thái</th>
-                <th className="px-6 py-4 text-right">Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    <RefreshCw className="animate-spin inline-block mr-2" size={18} />
-                    Đang tải dữ liệu...
-                  </td>
+      {/* Tables Section */}
+      <div className="space-y-8 pb-20">
+        {/* Active Lots */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between bg-emerald-50/20">
+            <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-emerald-500" />
+              Lô hàng khả dụng ({activeLots.length})
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="bg-gray-50/60 text-slate-500 font-semibold uppercase text-xs tracking-wider">
+                  <th className="px-6 py-4">Mã Lô</th>
+                  <th className="px-6 py-4">Sản Phẩm</th>
+                  <th className="px-6 py-4">Kho</th>
+                  <th className="px-6 py-4 text-center">Số Lượng</th>
+                  <th className="px-6 py-4">Hạn Sử Dụng</th>
+                  <th className="px-6 py-4">Trạng Thái</th>
+                  <th className="px-6 py-4 text-right">Thao Tác</th>
                 </tr>
-              ) : batchData?.data?.docs.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    Không tìm thấy lô hàng nào.
-                  </td>
-                </tr>
-              ) : (
-                batchData?.data?.docs.map((lot) => (
-                  <tr key={lot._id} className="hover:bg-blue-50/30 transition-colors group">
-                    <td className="px-6 py-4 font-mono text-xs font-bold text-blue-600">
-                      {lot.lotCode}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-                          <PackageIcon size={14} />
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {isLoading ? (
+                  Array(3).fill(0).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td colSpan={7} className="px-6 py-8 bg-gray-50/20" />
+                    </tr>
+                  ))
+                ) : activeLots.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic">Không tìm thấy lô hàng khả dụng nào.</td>
+                  </tr>
+                ) : (
+                  activeLots.map((lot: any) => (
+                    <tr key={lot._id} className="hover:bg-blue-50/30 transition-colors group">
+                      <td className="px-6 py-4 font-mono text-xs font-bold text-blue-600">{lot.lotCode}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium text-slate-700">{typeof lot.product === 'object' ? lot.product.name : 'Sản phẩm'}</span>
                         </div>
-                        <span className="font-medium text-slate-700">
-                          {typeof lot.product === 'object' ? lot.product.name : 'Sản phẩm'}
+                      </td>
+                      <td className="px-6 py-4 text-slate-500">
+                        <div className="flex items-center gap-1.5"><WarehouseIcon size={14} className="text-slate-400" /> <span>Kho chính</span></div>
+                      </td>
+                      <td className="px-6 py-4 text-center font-semibold text-slate-700">{lot.quantity}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-slate-700 font-medium">{format(new Date(lot.expiryDate), 'dd/MM/yyyy')}</span>
+                          {lot.remainingDays !== undefined && (
+                            <span className={`text-[10px] ${lot.remainingDays < 30 ? 'text-rose-500 font-bold' : 'text-slate-400'}`}>
+                              Còn {lot.remainingDays} ngày
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(lot.status)}`}>
+                          {getStatusIcon(lot.status)} {lot.status.toUpperCase()}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500">
-                      <div className="flex items-center gap-1.5">
-                        <WarehouseIcon size={14} className="text-slate-400" />
-                        <span>Kho chính</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center font-semibold text-slate-700">
-                      {lot.quantity}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-slate-700 font-medium">
-                          {format(new Date(lot.expiryDate), 'dd/MM/yyyy')}
-                        </span>
-                        {lot.remainingDays !== undefined && (
-                          <span className={`text-[10px] ${lot.remainingDays < 30 ? 'text-rose-500 font-bold' : 'text-slate-400'}`}>
-                            {lot.remainingDays > 0 ? `Còn ${lot.remainingDays} ngày` : 'Đã hết hạn'}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${getStatusStyle(lot.status)}`}>
-                        {getStatusIcon(lot.status)}
-                        {lot.status.charAt(0).toUpperCase() + lot.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-                          <Eye size={18} />
-                        </button>
-                        <div className="relative group/menu">
-                          <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-gray-100 rounded-lg transition-all">
-                            <MoreVertical size={18} />
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => router.push(`/batch-lots/${lot._id}`)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Eye size={16} /></button>
+                          <button onClick={() => router.push(`/batch-lots/edit/${lot._id}`)} className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg"><Edit2 size={16} /></button>
+                          <button 
+                            onClick={() => {
+                              if(window.confirm(`Bạn có chắc muốn xóa lô hàng ${lot.lotCode}?`)) {
+                                mutationDelete.mutate(lot._id);
+                              }
+                            }}
+                            className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
+                          >
+                            <Trash2 size={16} />
                           </button>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
+        {/* Inactive Lots (Archive/Expired) */}
+        {inactiveLots.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 px-2">
+              <div className="h-[1px] flex-1 bg-gray-200"></div>
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <AlertTriangle size={14} />
+                Lô hàng lưu trữ / Hết hạn ({inactiveLots.length})
+              </h3>
+              <div className="h-[1px] flex-1 bg-gray-200"></div>
+            </div>
+
+            <div className="bg-white/50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden backdrop-blur-sm">
+              <table className="w-full text-sm text-left">
+                <tbody className="divide-y divide-gray-50">
+                  {inactiveLots.map((lot: any) => (
+                    <tr key={lot._id} className="opacity-60 grayscale-[0.5] hover:grayscale-0 transition-all group">
+                      <td className="px-6 py-4 font-mono text-[10px] font-bold text-slate-400 line-through decoration-slate-400 decoration-1 whitespace-nowrap">{lot.lotCode}</td>
+                      <td className="px-6 py-4">
+                        <span className="text-slate-500 font-medium line-through decoration-slate-400 decoration-1">
+                          {typeof lot.product === 'object' ? lot.product.name : 'Sản phẩm'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center font-bold text-slate-400 opacity-50">{lot.quantity}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-slate-400 text-xs line-through">{format(new Date(lot.expiryDate), 'dd/MM/yyyy')}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(lot.status)} opacity-80`}>
+                          {lot.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => router.push(`/batch-lots/${lot._id}`)} title="Xem chi tiết" className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Eye size={16} /></button>
+                          <button 
+                            onClick={() => {
+                              if(window.confirm(`Bạn có chắc muốn xóa vĩnh viễn lô hàng ${lot.lotCode}?`)) {
+                                mutationDelete.mutate(lot._id);
+                              }
+                            }}
+                            className="p-2 text-rose-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+
         {/* Pagination placeholder */}
-        {batchData?.data && (
+        {batchData?.pagination && (
           <div className="px-6 py-4 border-t border-gray-50 flex items-center justify-between bg-white">
             <p className="text-xs text-slate-500">
-              Hiển thị <span className="font-bold text-slate-700">{batchData.data.docs.length}</span> trên <span className="font-bold text-slate-700">{batchData.data.totalDocs}</span> kết quả
+              Hiển thị <span className="font-bold text-slate-700">{lots.length}</span> trên <span className="font-bold text-slate-700">{batchData.pagination.total}</span> kết quả
             </p>
             <div className="flex gap-2">
               <button 
@@ -263,7 +340,7 @@ export default function BatchLotsPage() {
                 Trước
               </button>
               <button 
-                disabled={filters.page >= batchData.data.totalPages}
+                disabled={filters.page >= batchData.pagination.totalPages}
                 onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
                 className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-all"
               >
@@ -272,7 +349,6 @@ export default function BatchLotsPage() {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

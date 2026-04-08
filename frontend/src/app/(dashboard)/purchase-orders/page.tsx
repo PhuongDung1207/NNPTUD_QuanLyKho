@@ -42,6 +42,9 @@ export default function PurchaseOrdersPage() {
     queryFn: () => getPOs(filters),
   });
 
+  const purchaseOrders = (poData as any)?.data?.docs || [];
+  const pagination = (poData as any)?.data || null;
+
   // Fetch filters data
   const { data: suppliersData } = useQuery({
     queryKey: ['suppliers'],
@@ -188,14 +191,14 @@ export default function PurchaseOrdersPage() {
                     Đang tải dữ liệu đơn hàng...
                   </td>
                 </tr>
-              ) : poData?.data?.docs.length === 0 ? (
+              ) : purchaseOrders.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                     Không tìm thấy đơn mua hàng nào.
                   </td>
                 </tr>
               ) : (
-                poData?.data?.docs.map((po) => (
+                purchaseOrders.map((po: any) => (
                   <tr key={po._id} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -250,10 +253,10 @@ export default function PurchaseOrdersPage() {
         </div>
 
         {/* Pagination Section */}
-        {poData?.data && (
+        {pagination?.totalDocs > 0 && (
           <div className="px-6 py-4 border-t border-gray-50 flex items-center justify-between bg-white">
             <p className="text-xs text-slate-500">
-              Hiển thị <span className="font-bold text-slate-700">{poData.data.docs.length}</span> trên <span className="font-bold text-slate-700">{poData.data.totalDocs}</span> kết quả
+              Hiển thị <span className="font-bold text-slate-700">{purchaseOrders.length}</span> trên <span className="font-bold text-slate-700">{pagination.totalDocs}</span> kết quả
             </p>
             <div className="flex gap-2">
               <button 
@@ -264,7 +267,7 @@ export default function PurchaseOrdersPage() {
                 Trước
               </button>
               <button 
-                disabled={filters.page >= poData.data.totalPages}
+                disabled={filters.page >= (pagination.totalPages || 1)}
                 onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
                 className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-all shadow-sm"
               >

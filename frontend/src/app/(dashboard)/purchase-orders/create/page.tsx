@@ -41,9 +41,15 @@ export default function POCreatePage() {
   });
 
   // Data fetching for selectors
-  const { data: suppliersData } = useQuery({ queryKey: ['suppliers'], queryFn: getSuppliers });
-  const { data: warehousesData } = useQuery({ queryKey: ['warehouses'], queryFn: getWarehouses });
-  const { data: productsData } = useQuery({ 
+  const { data: suppliersData } = useQuery({ 
+    queryKey: ['suppliers'], 
+    queryFn: () => getSuppliers({ limit: 100 }) 
+  });
+  const { data: warehousesData } = useQuery({ 
+    queryKey: ['warehouses'], 
+    queryFn: () => getWarehouses({ limit: 100 }) 
+  });
+  const { data: productsData, isLoading: productsLoading } = useQuery({ 
     queryKey: ['products-list'], 
     queryFn: () => getProducts({ limit: 100 }) 
   });
@@ -66,7 +72,7 @@ export default function POCreatePage() {
         productName: product.name,
         sku: product.sku || '',
         quantity: 1,
-        unitPrice: product.purchasePrice || 0,
+        unitPrice: product.price?.cost || product.purchasePrice || 0,
         taxRate: 10,
       }]
     });
@@ -101,10 +107,21 @@ export default function POCreatePage() {
 
   const { subtotal, taxAmount, total } = calculateTotals();
 
+  const [formError, setFormError] = useState('');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.supplier || !formData.warehouse || formData.items.length === 0) {
-      alert('Vui lòng điền đầy đủ thông tin và thêm ít nhất 1 sản phẩm.');
+    setFormError('');
+    if (!formData.supplier) {
+      setFormError('Vui lòng chọn nhà cung cấp.');
+      return;
+    }
+    if (!formData.warehouse) {
+      setFormError('Vui lòng chọn kho nhận hàng.');
+      return;
+    }
+    if (formData.items.length === 0) {
+      setFormError('Vui lòng thêm ít nhất 1 sản phẩm vào đơn.');
       return;
     }
     mutationCreate.mutate(formData);
@@ -128,6 +145,24 @@ export default function POCreatePage() {
           <p className="text-sm text-slate-500">Lập kế hoạch nhập hàng và phê duyệt báo giá từ nhà cung cấp.</p>
         </div>
       </div>
+
+      {/* Form Error Banner */}
+      {(formError || mutationCreate.isError) && (
+        <div className="flex items-center gap-3 bg-rose-50 border border-rose-200 text-rose-700 px-5 py-3.5 rounded-2xl text-sm font-medium animate-in fade-in duration-300">
+          <AlertTriangle size={18} className="shrink-0 text-rose-500" />
+          <span>{formError || ((mutationCreate.error as any)?.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.')}</span>
+          <button type="button" onClick={() => { setFormError(''); mutationCreate.reset(); }} className="ml-auto text-rose-400 hover:text-rose-600">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* Success overlay */}
+      {mutationCreate.isSuccess && (
+        <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 px-5 py-3.5 rounded-2xl text-sm font-medium animate-in fade-in duration-300">
+          ✅ Đơn hàng đã được tạo thành công! Đang chuyển hướng...
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -185,20 +220,21 @@ export default function POCreatePage() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
               <h3 className="font-bold text-slate-800">Danh Sách Mặt Hàng</h3>
-              <div className="relative w-64 group">
+              <div className="relative w-72 group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors" size={16} />
                 <select 
-                  className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-100 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer"
+                  className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-100 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer disabled:opacity-50"
+                  disabled={productsLoading}
                   onChange={(e) => {
-                    const products = productsData?.data && 'docs' in productsData.data ? (productsData.data.docs as any[]) : [];
-                    const p = products.find((x: any) => x._id === e.target.value);
+                    const docs = productsData?.data?.docs ?? [];
+                    const p = docs.find((x: any) => x._id === e.target.value);
                     if (p) addItem(p);
                     e.target.value = "";
                   }}
                 >
-                  <option value="">+ Thêm sản phẩm...</option>
-                  {productsData?.data && 'docs' in productsData.data && (productsData.data.docs as any[]).map((p: any) => (
-                    <option key={p._id} value={p._id}>{p.name}</option>
+                  <option value="">{productsLoading ? 'Đang tải...' : '+ Thêm sản phẩm...'}</option>
+                  {(productsData?.data?.docs ?? []).map((p: any) => (
+                    <option key={p._id} value={p._id}>{p.name} {p.sku ? `(${p.sku})` : ''}</option>
                   ))}
                 </select>
               </div>

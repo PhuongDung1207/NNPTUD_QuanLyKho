@@ -51,6 +51,9 @@ export default function SuppliersPage() {
     s.code.toLowerCase().includes(search.toLowerCase()) ||
     s.contactName?.toLowerCase().includes(search.toLowerCase())
   );
+  
+  const activeSuppliers = filteredSuppliers.filter(s => s.status === 'active');
+  const inactiveSuppliers = filteredSuppliers.filter(s => s.status !== 'active');
 
   // Mutations
   const mutationCreate = useMutation({
@@ -160,105 +163,151 @@ export default function SuppliersPage() {
           </div>
         </div>
 
-        {/* Suppliers Table */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="bg-gray-50/50 text-slate-500 font-semibold uppercase text-[11px] tracking-wider border-b border-gray-100">
-                <th className="px-6 py-4">Nhà cung cấp</th>
-                <th className="px-6 py-4">Liên hệ</th>
-                <th className="px-6 py-4">Thông tin liên lạc</th>
-                <th className="px-6 py-4 text-center">Trạng thái</th>
-                <th className="px-6 py-4 text-right">Hành động</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {isLoading ? (
-                Array(5).fill(0).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td colSpan={5} className="px-6 py-4 h-16 bg-gray-50/20" />
-                  </tr>
-                ))
-              ) : filteredSuppliers.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Không tìm thấy nhà cung cấp nào.</td>
+        {/* Suppliers Tables */}
+        <div className="space-y-8 pb-20">
+          {/* Active Suppliers */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between bg-slate-50/30">
+              <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-emerald-500" />
+                Đang hoạt động ({activeSuppliers.length})
+              </h3>
+            </div>
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="bg-gray-50/50 text-slate-500 font-semibold uppercase text-[11px] tracking-wider border-b border-gray-100">
+                  <th className="px-6 py-4">Nhà cung cấp</th>
+                  <th className="px-6 py-4">Liên hệ</th>
+                  <th className="px-6 py-4">Thông tin liên lạc</th>
+                  <th className="px-6 py-4 text-center">Trạng thái</th>
+                  <th className="px-6 py-4 text-right">Hành động</th>
                 </tr>
-              ) : (
-                filteredSuppliers.map((supplier) => (
-                  <tr key={supplier._id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-xs">
-                          {supplier.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-800">{supplier.name}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">{supplier.code}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-slate-700 font-medium flex items-center gap-1.5">
-                          <UserIcon size={12} className="text-slate-400" />
-                          {supplier.contactName || '---'}
-                        </span>
-                        {supplier.taxCode && (
-                          <span className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                            <CreditCard size={12} />
-                            MST: {supplier.taxCode}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1 text-slate-500">
-                        {supplier.phone && (
-                          <span className="flex items-center gap-1.5 text-xs hover:text-blue-600 transition-colors">
-                            <Phone size={12} /> {supplier.phone}
-                          </span>
-                        )}
-                        {supplier.email && (
-                          <span className="flex items-center gap-1.5 text-xs hover:text-blue-600 transition-colors">
-                            <Mail size={12} /> {supplier.email}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border transition-colors ${
-                        supplier.status === 'active' 
-                          ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                          : 'bg-slate-50 text-slate-500 border-slate-100'
-                      }`}>
-                        {supplier.status === 'active' ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                        {supplier.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleEdit(supplier)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if(window.confirm('Xóa nhà cung cấp này?')) mutationDelete.mutate(supplier._id);
-                          }}
-                          className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {isLoading ? (
+                  Array(3).fill(0).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td colSpan={5} className="px-6 py-4 h-16 bg-gray-50/20" />
+                    </tr>
+                  ))
+                ) : activeSuppliers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Không có nhà cung cấp nào đang hoạt động.</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  activeSuppliers.map((supplier) => (
+                    <tr key={supplier._id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-xs">
+                            {supplier.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-slate-800">{supplier.name}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">{supplier.code}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-slate-700 font-medium flex items-center gap-1.5">
+                            <UserIcon size={12} className="text-slate-400" />
+                            {supplier.contactName || '---'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1 text-slate-500">
+                          {supplier.phone && <span className="flex items-center gap-1.5 text-xs"><Phone size={12} /> {supplier.phone}</span>}
+                          {supplier.email && <span className="flex items-center gap-1.5 text-xs"><Mail size={12} /> {supplier.email}</span>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-600 border-emerald-100 uppercase">
+                          <CheckCircle2 size={12} /> {supplier.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button 
+                            type="button"
+                            onClick={() => handleEdit(supplier)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <Edit2 size={16} className="pointer-events-none" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Inactive Suppliers (Archive) */}
+          {inactiveSuppliers.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 px-2">
+                <div className="h-[1px] flex-1 bg-gray-200"></div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <XCircle size={14} />
+                  Danh sách lưu trữ (Inactive)
+                </h3>
+                <div className="h-[1px] flex-1 bg-gray-200"></div>
+              </div>
+
+              <div className="bg-white/50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden backdrop-blur-sm">
+                <table className="w-full text-sm text-left">
+                  <tbody className="divide-y divide-gray-50">
+                    {inactiveSuppliers.map((supplier) => (
+                      <tr key={supplier._id} className="opacity-60 grayscale-[0.5] hover:grayscale-0 transition-all group">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs ring-1 ring-slate-200">
+                              {supplier.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-bold text-slate-500 line-through decoration-slate-400 decoration-2">{supplier.name}</span>
+                              <span className="text-[10px] text-slate-400 font-mono line-through">{supplier.code}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-slate-400 text-xs line-through italic">{supplier.contactName || '---'}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1 text-slate-400 opacity-50">
+                            {supplier.phone && <span className="text-[10px]">{supplier.phone}</span>}
+                            {supplier.email && <span className="text-[10px]">{supplier.email}</span>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border bg-gray-50 text-gray-400 border-gray-100 uppercase">
+                            <XCircle size={12} /> {supplier.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button 
+                              type="button"
+                              onClick={() => handleEdit(supplier)}
+                              className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg transition-colors"
+                              title="Xem chi tiết"
+                            >
+                              <Search size={16} className="pointer-events-none" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
+
       </div>
 
       {/* ── Side Form Section ── */}

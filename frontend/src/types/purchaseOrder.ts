@@ -36,7 +36,8 @@ export interface PurchaseOrder {
 }
 
 export interface POListResponse {
-  success: boolean;
+  success?: boolean;
+  message?: string;
   data: {
     docs: PurchaseOrder[];
     totalDocs: number;

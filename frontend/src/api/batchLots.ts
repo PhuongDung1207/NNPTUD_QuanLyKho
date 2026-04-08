@@ -57,3 +57,9 @@ export const updateBatchLotStatus = async (id: string, status: BatchLotStatus): 
   const response = await axios.patch(`/batch-lots/${id}/status`, { status });
   return response.data;
 };
+
+export const deleteBatchLot = async (id: string): Promise<{ message: string }> => {
+  const response = await axios.delete(`/batch-lots/${id}`);
+  return response.data;
+};
+
