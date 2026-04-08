@@ -156,7 +156,7 @@ export default function BatchLotsPage() {
           onChange={(e) => setFilters({ ...filters, product: e.target.value, page: 1 })}
         >
           <option value="">Tất cả sản phẩm</option>
-          {productsData?.data && 'docs' in productsData.data && (productsData.data.docs as any[]).map((p: any) => (
+          {Array.isArray(productsData?.data) && productsData.data.map((p: any) => (
             <option key={p._id} value={p._id}>{p.name}</option>
           ))}
         </select>
@@ -185,14 +185,14 @@ export default function BatchLotsPage() {
                     Đang tải dữ liệu...
                   </td>
                 </tr>
-              ) : batchData?.data?.docs.length === 0 ? (
+              ) : batchData?.data?.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                     Không tìm thấy lô hàng nào.
                   </td>
                 </tr>
               ) : (
-                batchData?.data?.docs.map((lot) => (
+                batchData?.data?.map((lot) => (
                   <tr key={lot._id} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4 font-mono text-xs font-bold text-blue-600">
                       {lot.lotCode}
@@ -254,10 +254,10 @@ export default function BatchLotsPage() {
         </div>
 
         {/* Pagination placeholder */}
-        {batchData?.data && (
+        {batchData?.pagination && (
           <div className="px-6 py-4 border-t border-gray-50 flex items-center justify-between bg-white">
             <p className="text-xs text-slate-500">
-              Hiển thị <span className="font-bold text-slate-700">{batchData.data.docs.length}</span> trên <span className="font-bold text-slate-700">{batchData.data.totalDocs}</span> kết quả
+              Hiển thị <span className="font-bold text-slate-700">{batchData.data?.length || 0}</span> trên <span className="font-bold text-slate-700">{batchData.pagination.total}</span> kết quả
             </p>
             <div className="flex gap-2">
               <button 
@@ -268,7 +268,7 @@ export default function BatchLotsPage() {
                 Trước
               </button>
               <button 
-                disabled={filters.page >= batchData.data.totalPages}
+                disabled={filters.page >= batchData.pagination.totalPages}
                 onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
                 className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-all"
               >

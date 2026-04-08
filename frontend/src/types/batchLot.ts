@@ -25,12 +25,12 @@ export interface BatchLotResponse {
 }
 
 export interface BatchLotListResponse {
-  success: boolean;
-  data: {
-    docs: BatchLot[];
-    totalDocs: number;
-    limit: number;
+  message?: string;
+  data: BatchLot[];
+  pagination: {
     page: number;
+    limit: number;
+    total: number;
     totalPages: number;
   };
 }

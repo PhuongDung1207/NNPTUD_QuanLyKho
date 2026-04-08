@@ -36,12 +36,12 @@ export interface PurchaseOrder {
 }
 
 export interface POListResponse {
-  success: boolean;
-  data: {
-    docs: PurchaseOrder[];
-    totalDocs: number;
-    limit: number;
+  message?: string;
+  data: PurchaseOrder[];
+  pagination: {
     page: number;
+    limit: number;
+    total: number;
     totalPages: number;
   };
 }

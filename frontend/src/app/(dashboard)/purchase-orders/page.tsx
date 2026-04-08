@@ -188,14 +188,14 @@ export default function PurchaseOrdersPage() {
                     Đang tải dữ liệu đơn hàng...
                   </td>
                 </tr>
-              ) : poData?.data?.docs.length === 0 ? (
+              ) : poData?.data?.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                     Không tìm thấy đơn mua hàng nào.
                   </td>
                 </tr>
               ) : (
-                poData?.data?.docs.map((po) => (
+                poData?.data?.map((po) => (
                   <tr key={po._id} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -250,10 +250,10 @@ export default function PurchaseOrdersPage() {
         </div>
 
         {/* Pagination Section */}
-        {poData?.data && (
+        {poData?.pagination && (
           <div className="px-6 py-4 border-t border-gray-50 flex items-center justify-between bg-white">
             <p className="text-xs text-slate-500">
-              Hiển thị <span className="font-bold text-slate-700">{poData.data.docs.length}</span> trên <span className="font-bold text-slate-700">{poData.data.totalDocs}</span> kết quả
+              Hiển thị <span className="font-bold text-slate-700">{poData.data?.length || 0}</span> trên <span className="font-bold text-slate-700">{poData.pagination.total}</span> kết quả
             </p>
             <div className="flex gap-2">
               <button 
@@ -264,7 +264,7 @@ export default function PurchaseOrdersPage() {
                 Trước
               </button>
               <button 
-                disabled={filters.page >= poData.data.totalPages}
+                disabled={filters.page >= poData.pagination.totalPages}
                 onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
                 className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-all shadow-sm"
               >

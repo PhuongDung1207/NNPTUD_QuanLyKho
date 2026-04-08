@@ -39,10 +39,10 @@ export interface Product {
 }
 
 export interface ProductListResponse {
-  success: boolean;
-  data: {
-    docs: Product[];
-    totalDocs: number;
+  message?: string;
+  data: Product[];
+  pagination: {
+    total: number;
     limit: number;
     page: number;
     totalPages: number;

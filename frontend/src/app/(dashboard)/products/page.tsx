@@ -57,7 +57,8 @@ export default function ProductsPage() {
     queryFn: () => getBrands(),
   });
 
-  const { docs: products = [], totalPages = 1 } = productsResponse?.data || {};
+  const products = Array.isArray(productsResponse?.data) ? productsResponse.data : [];
+  const totalPages = productsResponse?.pagination?.totalPages || 1;
   const categories = categoriesResponse?.data || [];
   const brands = brandsResponse?.data || [];
 
@@ -101,7 +102,7 @@ export default function ProductsPage() {
             Quản lý Sản phẩm
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Tổng cộng <span className="font-bold text-slate-700">{productsResponse?.data?.totalDocs || 0}</span> sản phẩm trong hệ thống.
+            Tổng cộng <span className="font-bold text-slate-700">{productsResponse?.pagination?.total || 0}</span> sản phẩm trong hệ thống.
           </p>
         </div>
         <Link 
@@ -232,13 +233,13 @@ export default function ProductsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border transition-colors ${statusColors[product.status]}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border transition-colors ${statusColors[product.status] || 'bg-slate-50 text-slate-500 border-slate-100'}`}>
                           <StatusIcon size={12} />
-                          {product.status.toUpperCase()}
+                          {(product.status || 'N/A').toUpperCase()}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right font-bold text-slate-700">
-                         {product.price?.sale?.toLocaleString('vi-VN')}
+                         {product.price?.sale?.toLocaleString('vi-VN') || '0'}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -274,14 +275,14 @@ export default function ProductsPage() {
           <div className="flex gap-2">
             <button 
               disabled={filters.page === 1}
-              onClick={() => handlePageChange(filters.page! - 1)}
+              onClick={() => handlePageChange((filters.page || 1) - 1)}
               className="p-2 rounded-lg border border-gray-200 text-slate-400 hover:bg-white hover:text-blue-600 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
             >
               <ChevronLeft size={18} />
             </button>
             <button 
               disabled={filters.page === totalPages}
-              onClick={() => handlePageChange(filters.page! + 1)}
+              onClick={() => handlePageChange((filters.page || 1) + 1)}
               className="p-2 rounded-lg border border-gray-200 text-slate-400 hover:bg-white hover:text-blue-600 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
             >
               <ChevronRight size={18} />

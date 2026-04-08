@@ -190,14 +190,14 @@ export default function POCreatePage() {
                 <select 
                   className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-100 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer"
                   onChange={(e) => {
-                    const products = productsData?.data && 'docs' in productsData.data ? (productsData.data.docs as any[]) : [];
+                    const products = Array.isArray(productsData?.data) ? productsData.data : [];
                     const p = products.find((x: any) => x._id === e.target.value);
                     if (p) addItem(p);
                     e.target.value = "";
                   }}
                 >
                   <option value="">+ Thêm sản phẩm...</option>
-                  {productsData?.data && 'docs' in productsData.data && (productsData.data.docs as any[]).map((p: any) => (
+                  {Array.isArray(productsData?.data) && productsData.data.map((p: any) => (
                     <option key={p._id} value={p._id}>{p.name}</option>
                   ))}
                 </select>

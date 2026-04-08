@@ -80,14 +80,14 @@ function mongoIdParamRule(field) {
 }
 
 const productListRules = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
-  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
-  query("category").optional().isMongoId().withMessage("category must be a valid ObjectId"),
-  query("brand").optional().isMongoId().withMessage("brand must be a valid ObjectId"),
-  query("supplier").optional().isMongoId().withMessage("supplier must be a valid ObjectId"),
-  query("warehouse").optional().isMongoId().withMessage("warehouse must be a valid ObjectId"),
-  query("status").optional().isIn(productStatuses).withMessage(`status must be one of: ${productStatuses.join(", ")}`),
-  query("lowStock").optional().isBoolean().withMessage("lowStock must be true or false")
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("category").optional({ values: 'falsy' }).isMongoId().withMessage("category must be a valid ObjectId"),
+  query("brand").optional({ values: 'falsy' }).isMongoId().withMessage("brand must be a valid ObjectId"),
+  query("supplier").optional({ values: 'falsy' }).isMongoId().withMessage("supplier must be a valid ObjectId"),
+  query("warehouse").optional({ values: 'falsy' }).isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  query("status").optional({ values: 'falsy' }).isIn(productStatuses).withMessage(`status must be one of: ${productStatuses.join(", ")}`),
+  query("lowStock").optional({ values: 'falsy' }).isBoolean().withMessage("lowStock must be true or false")
 ];
 
 const productCreateRules = [
@@ -169,10 +169,10 @@ const activateAccountRules = [
 ];
 
 const userListRules = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
-  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
-  query("status").optional().isIn(userStatuses).withMessage(`status must be one of: ${userStatuses.join(", ")}`),
-  query("role").optional().trim().notEmpty().withMessage("role cannot be empty")
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional({ values: 'falsy' }).isIn(userStatuses).withMessage(`status must be one of: ${userStatuses.join(", ")}`),
+  query("role").optional({ values: 'falsy' }).trim().notEmpty().withMessage("role cannot be empty")
 ];
 
 const userCreateRules = [
@@ -251,12 +251,12 @@ const userSelfUpdateRules = [
 ];
 
 const purchaseOrderListRules = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
-  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
-  query("status").optional().isIn(purchaseOrderStatuses).withMessage(`status must be one of: ${purchaseOrderStatuses.join(", ")}`),
-  query("supplier").optional().isMongoId().withMessage("supplier must be a valid ObjectId"),
-  query("warehouse").optional().isMongoId().withMessage("warehouse must be a valid ObjectId"),
-  query("code").optional().trim().isLength({ min: 1, max: 40 }).withMessage("code must be between 1 and 40 characters")
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional({ values: 'falsy' }).isIn(purchaseOrderStatuses).withMessage(`status must be one of: ${purchaseOrderStatuses.join(", ")}`),
+  query("supplier").optional({ values: 'falsy' }).isMongoId().withMessage("supplier must be a valid ObjectId"),
+  query("warehouse").optional({ values: 'falsy' }).isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  query("code").optional({ values: 'falsy' }).trim().isLength({ min: 1, max: 40 }).withMessage("code must be between 1 and 40 characters")
 ];
 
 const purchaseOrderCreateRules = [
@@ -286,10 +286,10 @@ const purchaseOrderUpdateRules = [
 ];
 
 const brandListRules = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
-  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
-  query("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
-  query("search").optional().isString().withMessage("search must be a string")
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional({ values: 'falsy' }).isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
+  query("search").optional({ values: 'falsy' }).isString().withMessage("search must be a string")
 ];
 
 const brandCreateRules = [
@@ -309,10 +309,10 @@ const brandUpdateRules = [
 ];
 
 const unitListRules = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
-  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
-  query("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
-  query("search").optional().isString().withMessage("search must be a string")
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional({ values: 'falsy' }).isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
+  query("search").optional({ values: 'falsy' }).isString().withMessage("search must be a string")
 ];
 
 const unitCreateRules = [
@@ -332,10 +332,10 @@ const unitUpdateRules = [
 ];
 
 const supplierListRules = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
-  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
-  query("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
-  query("search").optional().isString().withMessage("search must be a string")
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional({ values: 'falsy' }).isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
+  query("search").optional({ values: 'falsy' }).isString().withMessage("search must be a string")
 ];
 
 const supplierCreateRules = [
@@ -359,11 +359,11 @@ const supplierUpdateRules = [
 ];
 
 const warehouseListRules = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
-  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
-  query("status").optional().isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
-  query("manager").optional().isMongoId().withMessage("manager must be a valid ObjectId"),
-  query("search").optional().isString().withMessage("search must be a string")
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional({ values: 'falsy' }).isIn(commonStatuses).withMessage(`status must be one of: ${commonStatuses.join(", ")}`),
+  query("manager").optional({ values: 'falsy' }).isMongoId().withMessage("manager must be a valid ObjectId"),
+  query("search").optional({ values: 'falsy' }).isString().withMessage("search must be a string")
 ];
 
 const warehouseCreateRules = [
@@ -387,12 +387,12 @@ const warehouseUpdateRules = [
 ];
 
 const inventoryListRules = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
-  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
-  query("warehouse").optional().isMongoId().withMessage("warehouse must be a valid ObjectId"),
-  query("product").optional().isMongoId().withMessage("product must be a valid ObjectId"),
-  query("lowStock").optional().isBoolean().withMessage("lowStock must be true or false"),
-  query("belowMinStock").optional().isBoolean().withMessage("belowMinStock must be true or false")
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("warehouse").optional({ values: 'falsy' }).isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  query("product").optional({ values: 'falsy' }).isMongoId().withMessage("product must be a valid ObjectId"),
+  query("lowStock").optional({ values: 'falsy' }).isBoolean().withMessage("lowStock must be true or false"),
+  query("belowMinStock").optional({ values: 'falsy' }).isBoolean().withMessage("belowMinStock must be true or false")
 ];
 
 const inventoryCreateRules = [
@@ -416,12 +416,12 @@ const inventoryUpdateRules = [
 ];
 
 const transferOrderListRules = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
-  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
-  query("status").optional().isIn(transferOrderStatuses).withMessage(`status must be one of: ${transferOrderStatuses.join(", ")}`),
-  query("fromWarehouse").optional().isMongoId().withMessage("fromWarehouse must be a valid ObjectId"),
-  query("toWarehouse").optional().isMongoId().withMessage("toWarehouse must be a valid ObjectId"),
-  query("code").optional().trim().isLength({ min: 1, max: 40 }).withMessage("code must be between 1 and 40 characters")
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional({ values: 'falsy' }).isIn(transferOrderStatuses).withMessage(`status must be one of: ${transferOrderStatuses.join(", ")}`),
+  query("fromWarehouse").optional({ values: 'falsy' }).isMongoId().withMessage("fromWarehouse must be a valid ObjectId"),
+  query("toWarehouse").optional({ values: 'falsy' }).isMongoId().withMessage("toWarehouse must be a valid ObjectId"),
+  query("code").optional({ values: 'falsy' }).trim().isLength({ min: 1, max: 40 }).withMessage("code must be between 1 and 40 characters")
 ];
 
 const transferOrderCreateRules = [
@@ -515,13 +515,13 @@ const batchLotFieldsRules = [
 ];
 
 const batchLotListRules = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0"),
-  query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
-  query("product").optional().isMongoId().withMessage("product must be a valid ObjectId"),
-  query("warehouse").optional().isMongoId().withMessage("warehouse must be a valid ObjectId"),
-  query("status").optional().isIn(batchLotStatuses).withMessage(`status must be one of: ${batchLotStatuses.join(", ")}`),
-  query("lotCode").optional().trim().isLength({ min: 1, max: 50 }).withMessage("lotCode must be between 1 and 50 characters"),
-  query("expiryDate").optional().isISO8601().withMessage("expiryDate must be a valid ISO 8601 date")
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("product").optional({ values: 'falsy' }).isMongoId().withMessage("product must be a valid ObjectId"),
+  query("warehouse").optional({ values: 'falsy' }).isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  query("status").optional({ values: 'falsy' }).isIn(batchLotStatuses).withMessage(`status must be one of: ${batchLotStatuses.join(", ")}`),
+  query("lotCode").optional({ values: 'falsy' }).trim().isLength({ min: 1, max: 50 }).withMessage("lotCode must be between 1 and 50 characters"),
+  query("expiryDate").optional({ values: 'falsy' }).isISO8601().withMessage("expiryDate must be a valid ISO 8601 date")
 ];
 
 const batchLotCreateRules = [
