@@ -322,12 +322,13 @@ async function listPurchaseOrders(filters = {}) {
   ]);
 
   return {
+    success: true,
     message: "Purchase orders fetched successfully",
-    data: orders,
-    pagination: {
-      page,
+    data: {
+      docs: orders,
+      totalDocs: total,
       limit,
-      total,
+      page,
       totalPages: Math.ceil(total / limit) || 1
     }
   };

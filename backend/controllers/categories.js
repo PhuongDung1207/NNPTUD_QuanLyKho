@@ -21,6 +21,8 @@ async function listCategories(query = {}) {
   ]);
 
   return {
+    success: true,
+    message: "Categories fetched successfully",
     data: categories,
     pagination: {
       page,

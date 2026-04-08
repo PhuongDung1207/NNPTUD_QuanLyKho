@@ -66,6 +66,7 @@ async function listWarehouses(filters = {}) {
   ]);
 
   return {
+    success: true,
     message: "Warehouses fetched successfully",
     data: warehouses,
     pagination: {

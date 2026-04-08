@@ -34,6 +34,7 @@ async function listUnits(filters = {}) {
   ]);
 
   return {
+    success: true,
     message: "Units fetched successfully",
     data: units,
     pagination: {

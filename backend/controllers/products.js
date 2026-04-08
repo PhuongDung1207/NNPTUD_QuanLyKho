@@ -192,12 +192,13 @@ async function listProducts(filters = {}) {
   ]);
 
   return {
+    success: true,
     message: "Products fetched successfully",
-    data: products,
-    pagination: {
-      page,
+    data: {
+      docs: products,
+      totalDocs: total,
       limit,
-      total,
+      page,
       totalPages: Math.ceil(total / limit) || 1
     }
   };

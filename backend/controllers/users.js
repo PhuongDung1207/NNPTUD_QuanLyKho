@@ -438,6 +438,7 @@ async function listUsers(filters = {}) {
   ]);
 
   return {
+    success: true,
     message: "Users fetched successfully",
     data: users,
     pagination: {

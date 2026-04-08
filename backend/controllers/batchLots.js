@@ -138,12 +138,13 @@ async function listBatchLots(filters = {}) {
   ]);
 
   return {
+    success: true,
     message: "Batch lots fetched successfully",
-    data: batchLots.map(buildBatchLotResponse),
-    pagination: {
-      page,
+    data: {
+      docs: batchLots.map(buildBatchLotResponse),
+      totalDocs: total,
       limit,
-      total,
+      page,
       totalPages: Math.ceil(total / limit) || 1
     }
   };

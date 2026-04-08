@@ -6,8 +6,35 @@ import {
   BatchLotStatus 
 } from '@/types/batchLot';
 
-export const getBatchLots = async (params: any): Promise<BatchLotListResponse> => {
-  const response = await axios.get('/batch-lots', { params });
+export type BatchLotQueryParams = {
+  page?: number;
+  limit?: number;
+  lotCode?: string;
+  // UI param (mapped to lotCode)
+  search?: string;
+  status?: BatchLotStatus | '';
+  warehouse?: string;
+  product?: string;
+  expiryDate?: string;
+};
+
+export const getBatchLots = async (params: BatchLotQueryParams): Promise<BatchLotListResponse> => {
+  const nextParams: Record<string, any> = { ...(params || {}) };
+
+  // UI uses `search` but backend expects `lotCode`
+  if (typeof nextParams.search === 'string' && !nextParams.lotCode) {
+    nextParams.lotCode = nextParams.search;
+  }
+  delete nextParams.search;
+
+  // Remove empty string values to avoid validator 422
+  Object.keys(nextParams).forEach((key) => {
+    if (nextParams[key] === '') {
+      delete nextParams[key];
+    }
+  });
+
+  const response = await axios.get('/batch-lots', { params: nextParams });
   return response.data;
 };
 

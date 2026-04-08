@@ -26,6 +26,7 @@ import { createProduct } from '@/api/products';
 import { getCategories } from '@/api/categories';
 import { getBrands } from '@/api/brands';
 import { getUnits } from '@/api/units';
+import { getWarehouses } from '@/api/warehouses';
 import { Product } from '@/types/products';
 
 export default function CreateProductPage() {
@@ -36,6 +37,7 @@ export default function CreateProductPage() {
     name: '',
     sku: '',
     barcode: '',
+    warehouse: '',
     category: undefined,
     brand: undefined,
     uom: undefined,
@@ -60,10 +62,12 @@ export default function CreateProductPage() {
   const { data: categoriesResponse } = useQuery({ queryKey: ['categories'], queryFn: () => getCategories() });
   const { data: brandsResponse } = useQuery({ queryKey: ['brands'], queryFn: () => getBrands() });
   const { data: unitsResponse } = useQuery({ queryKey: ['units'], queryFn: () => getUnits() });
+  const { data: warehousesResponse } = useQuery({ queryKey: ['warehouses'], queryFn: () => getWarehouses() });
 
   const categories = categoriesResponse?.data || [];
   const brands = brandsResponse?.data || [];
   const units = unitsResponse?.data || [];
+  const warehouses = warehousesResponse?.data || [];
 
   // Mutation
   const mutationCreate = useMutation({
@@ -114,6 +118,29 @@ export default function CreateProductPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* Error Display */}
+        {mutationCreate.isError && (
+          <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+            <AlertCircle className="text-rose-500 mt-0.5 flex-shrink-0" size={18} />
+            <div>
+              <h3 className="text-sm font-bold text-rose-800">Lỗi lưu sản phẩm</h3>
+              <p className="text-xs text-rose-600 mt-0.5">
+                {(mutationCreate.error as any)?.response?.data?.message || 'Đã có lỗi xảy ra khi lưu sản phẩm. Vui lòng kiểm tra lại thông tin.'}
+              </p>
+              {(mutationCreate.error as any)?.response?.data?.errors && (
+                <ul className="mt-2 space-y-1">
+                  {(mutationCreate.error as any).response.data.errors.map((err: any, idx: number) => (
+                    <li key={idx} className="text-[10px] text-rose-500 flex items-center gap-1.5">
+                      <div className="w-1 h-1 rounded-full bg-rose-400" />
+                      {Object.values(err)[0] as string}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* ── Section 1: Thông tin cơ bản ── */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
@@ -195,7 +222,19 @@ export default function CreateProductPage() {
             <Layers size={16} className="text-violet-500" />
             <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Phân loại & Thuộc tính</h2>
           </div>
-          <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-600 uppercase ml-1">Kho hàng <span className="text-rose-500">*</span></label>
+              <select
+                required
+                className="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium appearance-none"
+                value={formData.warehouse}
+                onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
+              >
+                <option value="">Chọn kho hàng...</option>
+                {warehouses.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
+              </select>
+            </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-600 uppercase ml-1">Danh mục</label>
               <select

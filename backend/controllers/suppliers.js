@@ -34,6 +34,7 @@ async function listSuppliers(filters = {}) {
   ]);
 
   return {
+    success: true,
     message: "Suppliers fetched successfully",
     data: suppliers,
     pagination: {

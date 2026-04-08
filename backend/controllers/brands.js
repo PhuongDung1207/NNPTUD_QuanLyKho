@@ -34,6 +34,7 @@ async function listBrands(filters = {}) {
   ]);
 
   return {
+    success: true,
     message: "Brands fetched successfully",
     data: brands,
     pagination: {

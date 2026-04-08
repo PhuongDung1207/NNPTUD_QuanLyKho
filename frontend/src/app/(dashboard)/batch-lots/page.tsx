@@ -1,31 +1,30 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Box, 
   Search, 
-  Filter, 
   Plus, 
-  Calendar, 
   AlertTriangle,
   CheckCircle2,
   XCircle,
   Eye,
   MoreVertical,
-  ArrowUpDown,
   Warehouse as WarehouseIcon,
   Package as PackageIcon,
   RefreshCw
 } from 'lucide-react';
-import { getBatchLots, updateBatchLotStatus } from '@/api/batchLots';
+import { getBatchLots } from '@/api/batchLots';
 import { getWarehouses } from '@/api/warehouses';
 import { getProducts } from '@/api/products';
 import { BatchLotStatus } from '@/types/batchLot';
+import type { Product } from '@/types/products';
 import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
 
 export default function BatchLotsPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
@@ -51,15 +50,6 @@ export default function BatchLotsPage() {
     queryKey: ['products-list'],
     queryFn: () => getProducts({ limit: 100 }),
   });
-
-  const handleStatusChange = async (id: string, newStatus: BatchLotStatus) => {
-    try {
-      await updateBatchLotStatus(id, newStatus);
-      refetch();
-    } catch (error) {
-      console.error('Failed to update status', error);
-    }
-  };
 
   const getStatusStyle = (status: BatchLotStatus) => {
     switch (status) {
@@ -107,7 +97,10 @@ export default function BatchLotsPage() {
           >
             <RefreshCw size={18} className={isFetching ? 'animate-spin' : ''} />
           </button>
-          <button className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-all active:scale-95">
+          <button
+            onClick={() => router.push('/batch-lots/create')}
+            className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-all active:scale-95"
+          >
             <Plus size={18} />
             Tạo Lô Hàng Mới
           </button>
@@ -130,7 +123,7 @@ export default function BatchLotsPage() {
         <select
           className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm appearance-none bg-white transition-all"
           value={filters.status}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value as any, page: 1 })}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value as BatchLotStatus | '', page: 1 })}
         >
           <option value="">Tất cả trạng thái</option>
           <option value="available">Sẵn dùng (Available)</option>
@@ -156,8 +149,10 @@ export default function BatchLotsPage() {
           onChange={(e) => setFilters({ ...filters, product: e.target.value, page: 1 })}
         >
           <option value="">Tất cả sản phẩm</option>
-          {productsData?.data && 'docs' in productsData.data && (productsData.data.docs as any[]).map((p: any) => (
-            <option key={p._id} value={p._id}>{p.name}</option>
+          {productsData?.data?.docs?.map((p: Product) => (
+            <option key={p._id} value={p._id}>
+              {p.name}
+            </option>
           ))}
         </select>
       </div>
