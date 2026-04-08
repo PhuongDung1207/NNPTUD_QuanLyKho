@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const createError = require("http-errors");
 
 const {
@@ -101,12 +102,12 @@ function ensureManufactureDateBeforeExpiry(manufactureDate, expiryDate) {
   }
 }
 
-async function generatePurchaseOrderCode() {
+async function generatePurchaseOrderCode(session) {
   const prefix = `PO-${getDateCodeSegment()}-`;
   const regex = new RegExp(`^${prefix}`);
-  const count = await PurchaseOrder.countDocuments({ code: regex });
+  const count = await PurchaseOrder.countDocuments({ code: regex }).session(session);
   const code = `${prefix}${String(count + 1).padStart(3, "0")}`;
-  const exists = await PurchaseOrder.exists({ code });
+  const exists = await PurchaseOrder.exists({ code }).session(session);
 
   if (!exists) {
     return code;
@@ -114,7 +115,7 @@ async function generatePurchaseOrderCode() {
 
   for (let index = count + 2; index < count + 50; index += 1) {
     const nextCode = `${prefix}${String(index).padStart(3, "0")}`;
-    const duplicated = await PurchaseOrder.exists({ code: nextCode });
+    const duplicated = await PurchaseOrder.exists({ code: nextCode }).session(session);
 
     if (!duplicated) {
       return nextCode;
@@ -124,22 +125,22 @@ async function generatePurchaseOrderCode() {
   throw createError(500, "Unable to generate purchase order code");
 }
 
-async function ensureReferenceExists(Model, id, label) {
-  const document = await Model.findById(id);
+async function ensureReferenceExists(Model, id, label, session) {
+  const document = await Model.findById(id).session(session);
 
   if (!document) {
     throw createError(400, `${label} not found`);
   }
 }
 
-async function validatePurchaseOrderPayloadReferences(payload) {
+async function validatePurchaseOrderPayloadReferences(payload, session) {
   await Promise.all([
-    ensureReferenceExists(Supplier, payload.supplier, "supplier"),
-    ensureReferenceExists(Warehouse, payload.warehouse, "warehouse")
+    ensureReferenceExists(Supplier, payload.supplier, "supplier", session),
+    ensureReferenceExists(Warehouse, payload.warehouse, "warehouse", session)
   ]);
 
   const productIds = [...new Set((payload.items || []).map((item) => String(item.product)))];
-  await Promise.all(productIds.map((productId) => ensureReferenceExists(Product, productId, "product")));
+  await Promise.all(productIds.map((productId) => ensureReferenceExists(Product, productId, "product", session)));
 }
 
 function getDocumentId(documentOrId) {
@@ -186,11 +187,16 @@ function ensureTrackedProductsHaveBatchLots(orderItem, receiveItemPayload, expec
   }
 }
 
-async function getPurchaseOrderDetail(id) {
-  const [order, items] = await Promise.all([
-    PurchaseOrder.findById(id).populate(purchaseOrderPopulate),
-    PurchaseOrderItem.find({ purchaseOrder: id }).populate(purchaseOrderItemPopulate).sort({ createdAt: 1 })
-  ]);
+async function getPurchaseOrderDetail(id, session = null) {
+  const orderQuery = PurchaseOrder.findById(id).populate(purchaseOrderPopulate);
+  const itemQuery = PurchaseOrderItem.find({ purchaseOrder: id }).populate(purchaseOrderItemPopulate).sort({ createdAt: 1 });
+
+  if (session) {
+    orderQuery.session(session);
+    itemQuery.session(session);
+  }
+
+  const [order, items] = await Promise.all([orderQuery, itemQuery]);
 
   if (!order) {
     throw createError(404, "Purchase order not found");
@@ -208,8 +214,8 @@ async function getPurchaseOrderDetail(id) {
   };
 }
 
-async function replacePurchaseOrderItems(orderId, items) {
-  await PurchaseOrderItem.deleteMany({ purchaseOrder: orderId });
+async function replacePurchaseOrderItems(orderId, items, session) {
+  await PurchaseOrderItem.deleteMany({ purchaseOrder: orderId }).session(session);
 
   const normalizedItems = items.map((item) => buildPurchaseOrderItemPayload(item));
 
@@ -217,47 +223,64 @@ async function replacePurchaseOrderItems(orderId, items) {
     normalizedItems.map((item) => ({
       purchaseOrder: orderId,
       ...item
-    }))
+    })),
+    { session }
   );
 
   return normalizedItems;
 }
 
 async function createPurchaseOrder(payload, user) {
+  const session = await mongoose.startSession();
+
   try {
-    await validatePurchaseOrderPayloadReferences(payload);
+    session.startTransaction();
+
+    await validatePurchaseOrderPayloadReferences(payload, session);
 
     const normalizedItems = payload.items.map((item) => buildPurchaseOrderItemPayload(item));
     const totals = calculatePurchaseOrderTotals(normalizedItems);
-    const code = payload.code ? formatPurchaseOrderCode(payload.code) : await generatePurchaseOrderCode();
+    const code = payload.code ? formatPurchaseOrderCode(payload.code) : await generatePurchaseOrderCode(session);
 
-    const order = await PurchaseOrder.create(
-      removeUndefinedFields({
-        code,
-        supplier: payload.supplier,
-        warehouse: payload.warehouse,
-        orderedBy: user?._id,
-        expectedDate: payload.expectedDate,
-        note: payload.note,
-        subtotal: totals.subtotal,
-        taxAmount: totals.taxAmount,
-        totalAmount: totals.totalAmount
-      })
+    const [order] = await PurchaseOrder.create(
+      [
+        removeUndefinedFields({
+          code,
+          supplier: payload.supplier,
+          warehouse: payload.warehouse,
+          orderedBy: user?._id,
+          expectedDate: payload.expectedDate,
+          note: payload.note,
+          subtotal: totals.subtotal,
+          taxAmount: totals.taxAmount,
+          totalAmount: totals.totalAmount
+        })
+      ],
+      { session }
     );
 
     await PurchaseOrderItem.insertMany(
       normalizedItems.map((item) => ({
         purchaseOrder: order._id,
         ...item
-      }))
+      })),
+      { session }
     );
 
-    return getPurchaseOrderDetail(order._id);
+    const data = await getPurchaseOrderDetail(order._id, session);
+
+    await session.commitTransaction();
+
+    return data;
   } catch (error) {
+    await session.abortTransaction();
+
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
     throw error;
+  } finally {
+    await session.endSession();
   }
 }
 
@@ -294,8 +317,12 @@ async function getPurchaseOrderById(id) {
 }
 
 async function updatePurchaseOrderById(id, payload) {
+  const session = await mongoose.startSession();
+
   try {
-    const order = await PurchaseOrder.findById(id);
+    session.startTransaction();
+
+    const order = await PurchaseOrder.findById(id).session(session);
 
     if (!order) {
       throw createError(404, "Purchase order not found");
@@ -305,7 +332,7 @@ async function updatePurchaseOrderById(id, payload) {
       throw createError(409, "Only draft purchase orders can be updated");
     }
 
-    await validatePurchaseOrderPayloadReferences(payload);
+    await validatePurchaseOrderPayloadReferences(payload, session);
 
     const normalizedItems = payload.items.map((item) => buildPurchaseOrderItemPayload(item));
     const totals = calculatePurchaseOrderTotals(normalizedItems);
@@ -324,15 +351,23 @@ async function updatePurchaseOrderById(id, payload) {
       })
     );
 
-    await order.save();
-    await replacePurchaseOrderItems(order._id, normalizedItems);
+    await order.save({ session });
+    await replacePurchaseOrderItems(order._id, normalizedItems, session);
 
-    return getPurchaseOrderDetail(order._id);
+    const data = await getPurchaseOrderDetail(order._id, session);
+
+    await session.commitTransaction();
+
+    return data;
   } catch (error) {
+    await session.abortTransaction();
+
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
     throw error;
+  } finally {
+    await session.endSession();
   }
 }
 
@@ -376,41 +411,51 @@ async function approvePurchaseOrder(id) {
   return getPurchaseOrderDetail(order._id);
 }
 
-async function applyInventoryReceipt({ order, item, quantityToReceive, note, user }) {
+async function applyInventoryReceipt({ order, item, quantityToReceive, note, user, session }) {
   let inventory = await Inventory.findOne({
     product: item.product,
     warehouse: order.warehouse
-  });
+  }).session(session);
 
   if (!inventory) {
-    inventory = await Inventory.create({
-      product: item.product,
-      warehouse: order.warehouse
-    });
+    [inventory] = await Inventory.create(
+      [
+        {
+          product: item.product,
+          warehouse: order.warehouse
+        }
+      ],
+      { session }
+    );
   }
 
   inventory.quantityOnHand += Number(quantityToReceive);
   inventory.lastStockedAt = new Date();
-  await inventory.save();
+  await inventory.save({ session });
 
   item.receivedQuantity = Number(item.receivedQuantity || 0) + Number(quantityToReceive);
-  await item.save();
+  await item.save({ session });
 
-  await InventoryTransaction.create({
-    inventory: inventory._id,
-    product: item.product,
-    warehouse: order.warehouse,
-    type: "import",
-    quantity: Number(quantityToReceive),
-    balanceAfter: inventory.quantityOnHand,
-    referenceType: "purchase_order",
-    referenceId: order._id,
-    note: note || `Received from purchase order ${order.code}`,
-    createdBy: user?._id
-  });
+  await InventoryTransaction.create(
+    [
+      {
+        inventory: inventory._id,
+        product: item.product,
+        warehouse: order.warehouse,
+        type: "import",
+        quantity: Number(quantityToReceive),
+        balanceAfter: inventory.quantityOnHand,
+        referenceType: "purchase_order",
+        referenceId: order._id,
+        note: note || `Received from purchase order ${order.code}`,
+        createdBy: user?._id
+      }
+    ],
+    { session }
+  );
 }
 
-async function createBatchLotsForReceivedItem({ order, item, batchLots }) {
+async function createBatchLotsForReceivedItem({ order, item, batchLots, session }) {
   if (!batchLots?.length) {
     return;
   }
@@ -424,17 +469,22 @@ async function createBatchLotsForReceivedItem({ order, item, batchLots }) {
       expiryDate: batchLot.expiryDate,
       quantity: Number(batchLot.quantity),
       status: isExpiredByDate(batchLot.expiryDate) ? "expired" : "available"
-    }))
+    })),
+    { session }
   );
 }
 
-async function validateReceiveItemsBelongToOrder(orderId) {
-  return PurchaseOrderItem.find({ purchaseOrder: orderId }).populate("product", "tracking");
+async function validateReceiveItemsBelongToOrder(orderId, session) {
+  return PurchaseOrderItem.find({ purchaseOrder: orderId }).populate("product", "tracking").session(session);
 }
 
 async function receivePurchaseOrderPartially(id, payload, user) {
+  const session = await mongoose.startSession();
+
   try {
-    const order = await PurchaseOrder.findById(id);
+    session.startTransaction();
+
+    const order = await PurchaseOrder.findById(id).session(session);
 
     if (!order) {
       throw createError(404, "Purchase order not found");
@@ -444,7 +494,7 @@ async function receivePurchaseOrderPartially(id, payload, user) {
       throw createError(409, "Only approved purchase orders can be partially received");
     }
 
-    const items = await validateReceiveItemsBelongToOrder(order._id);
+    const items = await validateReceiveItemsBelongToOrder(order._id, session);
 
     if (!items.length) {
       throw createError(409, "Purchase order has no items to receive");
@@ -474,38 +524,52 @@ async function receivePurchaseOrderPartially(id, payload, user) {
         item: orderItem,
         quantityToReceive,
         note: payload.note,
-        user
+        user,
+        session
       });
 
       await createBatchLotsForReceivedItem({
         order,
         item: orderItem,
-        batchLots: receiveItemPayloadMap.get(String(orderItem._id))?.batchLots
+        batchLots: receiveItemPayloadMap.get(String(orderItem._id))?.batchLots,
+        session
       });
     }
 
-    const refreshedItems = await PurchaseOrderItem.find({ purchaseOrder: order._id });
+    const refreshedItems = await PurchaseOrderItem.find({ purchaseOrder: order._id }).session(session);
     const isFullyReceived = refreshedItems.every(
       (item) => Number(item.receivedQuantity || 0) >= Number(item.quantity)
     );
 
     if (isFullyReceived) {
       order.status = "received";
-      await order.save();
+      await order.save({ session });
     }
 
-    return getPurchaseOrderDetail(order._id);
+    const data = await getPurchaseOrderDetail(order._id, session);
+
+    await session.commitTransaction();
+
+    return data;
   } catch (error) {
+    await session.abortTransaction();
+
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
     throw error;
+  } finally {
+    await session.endSession();
   }
 }
 
 async function receivePurchaseOrder(id, payload, user) {
+  const session = await mongoose.startSession();
+
   try {
-    const order = await PurchaseOrder.findById(id);
+    session.startTransaction();
+
+    const order = await PurchaseOrder.findById(id).session(session);
 
     if (!order) {
       throw createError(404, "Purchase order not found");
@@ -515,7 +579,7 @@ async function receivePurchaseOrder(id, payload, user) {
       throw createError(409, "Only approved purchase orders can be received");
     }
 
-    const items = await validateReceiveItemsBelongToOrder(order._id);
+    const items = await validateReceiveItemsBelongToOrder(order._id, session);
 
     if (!items.length) {
       throw createError(409, "Purchase order has no items to receive");
@@ -538,25 +602,35 @@ async function receivePurchaseOrder(id, payload, user) {
         item,
         quantityToReceive: remainingQuantity,
         note: payload?.note,
-        user
+        user,
+        session
       });
 
       await createBatchLotsForReceivedItem({
         order,
         item,
-        batchLots: receiveItemPayload?.batchLots
+        batchLots: receiveItemPayload?.batchLots,
+        session
       });
     }
 
     order.status = "received";
-    await order.save();
+    await order.save({ session });
 
-    return getPurchaseOrderDetail(order._id);
+    const data = await getPurchaseOrderDetail(order._id, session);
+
+    await session.commitTransaction();
+
+    return data;
   } catch (error) {
+    await session.abortTransaction();
+
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
     throw error;
+  } finally {
+    await session.endSession();
   }
 }
 
