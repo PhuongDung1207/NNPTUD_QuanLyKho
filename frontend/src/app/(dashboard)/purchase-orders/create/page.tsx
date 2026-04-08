@@ -15,7 +15,7 @@ import {
   X,
   AlertTriangle
 } from 'lucide-react';
-import { createPO } from '@/api/purchaseOrders';
+import { createPO, submitPO } from '@/api/purchaseOrders';
 import { getSuppliers } from '@/api/suppliers';
 import { getWarehouses } from '@/api/warehouses';
 import { getProducts } from '@/api/products';
@@ -42,19 +42,53 @@ export default function POCreatePage() {
   });
 
   // Data fetching for selectors
-  const { data: suppliersData } = useQuery({ queryKey: ['suppliers'], queryFn: getSuppliers });
-  const { data: warehousesData } = useQuery({ queryKey: ['warehouses'], queryFn: getWarehouses });
+  const { data: suppliersData } = useQuery({ queryKey: ['suppliers'], queryFn: () => getSuppliers() });
+  const { data: warehousesData } = useQuery({ queryKey: ['warehouses'], queryFn: () => getWarehouses() });
   const { data: productsData } = useQuery({ 
     queryKey: ['products-list'], 
     queryFn: () => getProducts({ limit: 100 }) 
   });
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const mutationCreate = useMutation({
-    mutationFn: (data: any) => createPO(data),
+    mutationFn: async (data: any) => {
+      // Map data properly to match backend constraints
+      const payload = {
+        supplier: data.supplier,
+        warehouse: data.warehouse,
+        note: data.note || undefined,
+        expectedDate: data.expectedDate ? new Date(data.expectedDate).toISOString() : undefined,
+        items: data.items.map((item: POFormItem) => ({
+          product: item.product,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          taxRate: Number(item.taxRate)
+        }))
+      };
+
+      // Clean undefined fields
+      Object.keys(payload).forEach(k => {
+        if ((payload as any)[k] === undefined) delete (payload as any)[k];
+      });
+      
+      const res = await createPO(payload);
+      
+      // If user wants to submit (Tạo và Chờ Phê Duyệt), submit the PO after creation
+      if (data._submitType === 'submit' && res.data?._id) {
+        await submitPO(res.data._id);
+      }
+      return res;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
       router.push('/purchase-orders');
       router.refresh();
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err?.message || 'Đã xảy ra lỗi không xác định';
+      const details = err?.response?.data?.errors;
+      setErrorMsg(details ? JSON.stringify(details, null, 2) : msg);
     }
   });
 
@@ -103,13 +137,14 @@ export default function POCreatePage() {
 
   const { subtotal, taxAmount, total } = calculateTotals();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent, type: 'draft' | 'submit' = 'draft') => {
     e.preventDefault();
     if (!formData.supplier || !formData.warehouse || formData.items.length === 0) {
       alert('Vui lòng điền đầy đủ thông tin và thêm ít nhất 1 sản phẩm.');
       return;
     }
-    mutationCreate.mutate(formData);
+    setErrorMsg(null);
+    mutationCreate.mutate({ ...formData, _submitType: type });
   };
 
   return (
@@ -131,7 +166,7 @@ export default function POCreatePage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <form onSubmit={(e) => e.preventDefault()} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Detailed Config */}
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
@@ -297,15 +332,33 @@ export default function POCreatePage() {
               </div>
             </div>
 
-            <button 
-              type="submit"
-              disabled={mutationCreate.isPending}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 mt-4"
-            >
-              {mutationCreate.isPending ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
-              Lưu Thành Bản Nháp
-            </button>
-            <p className="text-[10px] text-center text-slate-400">Đơn hàng sau khi lưu sẽ ở trạng thái <b>DRAFT</b> và có thể chỉnh sửa thêm.</p>
+            <div className="space-y-3 mt-4">
+              {errorMsg && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-mono whitespace-pre-wrap break-all">
+                  <b>Lỗi:</b> {errorMsg}
+                </div>
+              )}
+              <button 
+                type="button"
+                onClick={(e) => handleSubmit(e as any, 'draft')}
+                disabled={mutationCreate.isPending}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-blue-600 bg-white px-6 py-3.5 text-sm font-bold text-blue-600 hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {mutationCreate.isPending ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
+                Lưu Thành Bản Nháp
+              </button>
+              
+              <button 
+                type="button"
+                onClick={(e) => handleSubmit(e as any, 'submit')}
+                disabled={mutationCreate.isPending}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {mutationCreate.isPending ? <RefreshCw className="animate-spin" size={18} /> : <RefreshCw size={18} />}
+                Tạo và Chờ Phê Duyệt
+              </button>
+            </div>
+            <p className="text-[10px] text-center text-slate-400 mt-3">Bản nháp có thể chỉnh sửa thêm. Nếu chọn gửi duyệt, đơn hàng sẽ chuyển sang trạng thái <b>PENDING</b>.</p>
           </div>
 
           <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 space-y-3">

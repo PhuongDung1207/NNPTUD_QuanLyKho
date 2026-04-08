@@ -37,7 +37,6 @@ function removeUndefinedFields(payload) {
 
 function getDuplicateKeyMessage(error) {
   const field = Object.keys(error.keyPattern || {})[0] || "field";
-
   return `${field} already exists`;
 }
 
@@ -78,11 +77,7 @@ function calculatePurchaseOrderTotals(items) {
 
       return totals;
     },
-    {
-      subtotal: 0,
-      taxAmount: 0,
-      totalAmount: 0
-    }
+    { subtotal: 0, taxAmount: 0, totalAmount: 0 }
   );
 }
 
@@ -90,7 +85,6 @@ function getDateCodeSegment(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-
   return `${year}${month}${day}`;
 }
 
@@ -146,7 +140,6 @@ async function validatePurchaseOrderPayloadReferences(payload, session) {
   ]);
 
   const productIds = [...new Set((payload.items || []).map((item) => String(item.product)))];
-
   await Promise.all(productIds.map((productId) => ensureReferenceExists(Product, productId, "product", session)));
 }
 
@@ -213,7 +206,6 @@ async function getPurchaseOrderDetail(id, session = null) {
     ...order.toObject(),
     items: items.map((item) => {
       const itemObject = item.toObject();
-
       return {
         ...itemObject,
         remainingQuantity: Math.max(Number(itemObject.quantity) - Number(itemObject.receivedQuantity || 0), 0)
@@ -242,7 +234,6 @@ async function createPurchaseOrder(payload, user) {
   const session = await mongoose.startSession();
 
   try {
-    // Tao header va items trong cung mot transaction de du lieu khong bi lech nhau.
     session.startTransaction();
 
     await validatePurchaseOrderPayloadReferences(payload, session);
@@ -287,7 +278,6 @@ async function createPurchaseOrder(payload, user) {
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
-
     throw error;
   } finally {
     await session.endSession();
@@ -300,21 +290,10 @@ async function listPurchaseOrders(filters = {}) {
   const skip = (page - 1) * limit;
   const query = {};
 
-  if (filters.status) {
-    query.status = filters.status;
-  }
-
-  if (filters.supplier) {
-    query.supplier = filters.supplier;
-  }
-
-  if (filters.warehouse) {
-    query.warehouse = filters.warehouse;
-  }
-
-  if (filters.code) {
-    query.code = { $regex: filters.code, $options: "i" };
-  }
+  if (filters.status) query.status = filters.status;
+  if (filters.supplier) query.supplier = filters.supplier;
+  if (filters.warehouse) query.warehouse = filters.warehouse;
+  if (filters.code) query.code = { $regex: filters.code, $options: "i" };
 
   const [orders, total] = await Promise.all([
     PurchaseOrder.find(query).populate(purchaseOrderPopulate).sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -341,7 +320,6 @@ async function updatePurchaseOrderById(id, payload) {
   const session = await mongoose.startSession();
 
   try {
-    // Chi cho phep sua khi phieu con o draft de giu dung workflow duyet/nhan.
     session.startTransaction();
 
     const order = await PurchaseOrder.findById(id).session(session);
@@ -387,7 +365,6 @@ async function updatePurchaseOrderById(id, payload) {
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
-
     throw error;
   } finally {
     await session.endSession();
@@ -405,7 +382,6 @@ async function submitPurchaseOrder(id) {
     throw createError(409, "Only draft purchase orders can be submitted");
   }
 
-  // Gui phieu len cho buoc duyet, khong cho submit khi phieu rong.
   const itemCount = await PurchaseOrderItem.countDocuments({ purchaseOrder: order._id });
 
   if (!itemCount) {
@@ -429,21 +405,13 @@ async function approvePurchaseOrder(id) {
     throw createError(409, "Only pending purchase orders can be approved");
   }
 
-  // Duyet phieu de mo khoa buoc nhan hang.
   order.status = "approved";
   await order.save();
 
   return getPurchaseOrderDetail(order._id);
 }
 
-async function applyInventoryReceipt({
-  order,
-  item,
-  quantityToReceive,
-  note,
-  user,
-  session
-}) {
+async function applyInventoryReceipt({ order, item, quantityToReceive, note, user, session }) {
   let inventory = await Inventory.findOne({
     product: item.product,
     warehouse: order.warehouse
@@ -463,7 +431,6 @@ async function applyInventoryReceipt({
 
   inventory.quantityOnHand += Number(quantityToReceive);
   inventory.lastStockedAt = new Date();
-
   await inventory.save({ session });
 
   item.receivedQuantity = Number(item.receivedQuantity || 0) + Number(quantityToReceive);
@@ -488,12 +455,7 @@ async function applyInventoryReceipt({
   );
 }
 
-async function createBatchLotsForReceivedItem({
-  order,
-  item,
-  batchLots,
-  session
-}) {
+async function createBatchLotsForReceivedItem({ order, item, batchLots, session }) {
   if (!batchLots?.length) {
     return;
   }
@@ -513,16 +475,13 @@ async function createBatchLotsForReceivedItem({
 }
 
 async function validateReceiveItemsBelongToOrder(orderId, session) {
-  return PurchaseOrderItem.find({ purchaseOrder: orderId })
-    .populate("product", "tracking")
-    .session(session);
+  return PurchaseOrderItem.find({ purchaseOrder: orderId }).populate("product", "tracking").session(session);
 }
 
 async function receivePurchaseOrderPartially(id, payload, user) {
   const session = await mongoose.startSession();
 
   try {
-    // Nhan mot phan se cap nhat receivedQuantity tung dong va ton kho theo dot nhan.
     session.startTransaction();
 
     const order = await PurchaseOrder.findById(id).session(session);
@@ -598,7 +557,6 @@ async function receivePurchaseOrderPartially(id, payload, user) {
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
-
     throw error;
   } finally {
     await session.endSession();
@@ -609,7 +567,6 @@ async function receivePurchaseOrder(id, payload, user) {
   const session = await mongoose.startSession();
 
   try {
-    // Nhan hang se dong bo item, ton kho va lich su giao dich trong mot transaction.
     session.startTransaction();
 
     const order = await PurchaseOrder.findById(id).session(session);
@@ -638,7 +595,6 @@ async function receivePurchaseOrder(id, payload, user) {
       }
 
       const receiveItemPayload = receiveItemPayloadMap.get(String(item._id));
-
       ensureTrackedProductsHaveBatchLots(item, receiveItemPayload, remainingQuantity);
 
       await applyInventoryReceipt({
@@ -672,7 +628,6 @@ async function receivePurchaseOrder(id, payload, user) {
     if (error?.code === 11000) {
       throw createError(409, getDuplicateKeyMessage(error));
     }
-
     throw error;
   } finally {
     await session.endSession();

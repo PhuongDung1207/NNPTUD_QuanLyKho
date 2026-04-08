@@ -30,7 +30,7 @@ mongoose.connection.on('disconnecting', function () {
 
 app.use(logger("dev"));
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3001",
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
   credentials: true
 }));
 app.use(express.json());
