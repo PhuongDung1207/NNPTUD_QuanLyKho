@@ -16,6 +16,8 @@ const TransferOrder = require("./transferOrders");
 const TransferOrderItem = require("./transferOrderItems");
 const BatchLot = require("./batchLots");
 const AuditLog = require("./auditLogs");
+const OutboundOrder = require("./outboundOrders");
+const OutboundOrderItem = require("./outboundOrderItems");
 
 module.exports = {
   Permission,
@@ -35,5 +37,7 @@ module.exports = {
   TransferOrder,
   TransferOrderItem,
   BatchLot,
-  AuditLog
+  AuditLog,
+  OutboundOrder,
+  OutboundOrderItem
 };

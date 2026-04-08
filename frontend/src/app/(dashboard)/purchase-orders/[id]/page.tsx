@@ -58,6 +58,7 @@ export default function PODetailPage() {
     mutationFn: () => submitPO(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchaseOrder', id] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
     }
   });
 
@@ -65,6 +66,7 @@ export default function PODetailPage() {
     mutationFn: () => approvePO(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchaseOrder', id] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
     }
   });
 
@@ -72,6 +74,7 @@ export default function PODetailPage() {
     mutationFn: () => cancelPO(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchaseOrder', id] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
     }
   });
 
@@ -80,6 +83,7 @@ export default function PODetailPage() {
     onSuccess: () => {
       setIsReceiveModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ['purchaseOrder', id] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
     }
   });
 

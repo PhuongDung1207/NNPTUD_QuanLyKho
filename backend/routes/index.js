@@ -38,5 +38,6 @@ router.use("/inventories", require("./inventories"));
 router.use("/transfer-orders", require("./transferOrders"));
 router.use("/product-variants", productVariantsRouter);
 router.use("/messages", messagesRouter);
+router.use("/outbound-orders", require("./outboundOrders"));
 
 module.exports = router;

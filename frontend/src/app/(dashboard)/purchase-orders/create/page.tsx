@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ArrowLeft, 
   ShoppingCart, 
@@ -32,6 +32,7 @@ interface POFormItem {
 
 export default function POCreatePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     supplier: '',
     warehouse: '',
@@ -51,6 +52,7 @@ export default function POCreatePage() {
   const mutationCreate = useMutation({
     mutationFn: (data: any) => createPO(data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
       router.push('/purchase-orders');
       router.refresh();
     }

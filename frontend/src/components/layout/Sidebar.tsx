@@ -13,7 +13,11 @@ import {
   Layers,
   Building2,
   Box,
-  Warehouse
+  Warehouse,
+  ArrowRightLeft,
+  ClipboardList,
+  Upload,
+  UserPlus
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Role } from '@/types/auth';
@@ -24,12 +28,15 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Warehouses', href: '/warehouses', icon: Warehouse },
   { name: 'Products', href: '/products', icon: Package },
+  { name: 'Inventories', href: '/inventories', icon: ClipboardList },
   { name: 'Batch Lots', href: '/batch-lots', icon: Box },
   { name: 'Categories', href: '/categories', icon: Layers },
   { name: 'Brands', href: '/brands', icon: Tag },
   { name: 'Units', href: '/units', icon: Building2 },
-  { name: 'Suppliers', href: '/suppliers', icon: Truck },
+  { name: 'Suppliers', href: '/suppliers', icon: Building2 },
+  { name: 'Transfer Orders', href: '/transfer-orders', icon: ArrowRightLeft },
   { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
+  { name: 'Outbound Orders', href: '/outbound-orders', icon: Truck },
   { name: 'User Management', href: '/users', icon: Users },
 ];
 

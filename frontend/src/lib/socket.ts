@@ -5,7 +5,7 @@ let socket: Socket | null = null;
 export const connectSocket = (token: string) => {
   if (socket?.connected) return socket;
 
-  socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000', {
+  socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000', {
     auth: {
       token,
     },

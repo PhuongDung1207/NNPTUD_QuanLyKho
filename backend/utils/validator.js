@@ -6,6 +6,7 @@ const userStatuses = ["active", "inactive", "locked"];
 const purchaseOrderStatuses = ["draft", "pending", "approved", "received", "cancelled"];
 const batchLotStatuses = ["available", "blocked", "expired"];
 const transferOrderStatuses = ["draft", "pending", "in_transit", "completed", "cancelled"];
+const outboundOrderStatuses = ["draft", "pending", "shipped", "cancelled"];
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 64;
 
@@ -458,6 +459,36 @@ const transferOrderUpdateRules = [
   body("items.*.note").optional({ values: "falsy" }).isLength({ max: 500 }).withMessage("item note must be at most 500 characters")
 ];
 
+const outboundOrderListRules = [
+  query("page").optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage("page must be greater than 0"),
+  query("limit").optional({ values: 'falsy' }).isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+  query("status").optional({ values: 'falsy' }).isIn(outboundOrderStatuses).withMessage(`status must be one of: ${outboundOrderStatuses.join(", ")}`),
+  query("warehouse").optional({ values: 'falsy' }).isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  query("code").optional({ values: 'falsy' }).trim().isLength({ min: 1, max: 40 }).withMessage("code must be between 1 and 40 characters")
+];
+
+const outboundOrderCreateRules = [
+  body("code").optional({ values: "falsy" }).trim().isLength({ max: 40 }).withMessage("code must be at most 40 characters"),
+  body("customerName").trim().notEmpty().withMessage("customerName is required").isLength({ max: 200 }).withMessage("customerName must be at most 200 characters"),
+  body("warehouse").notEmpty().withMessage("warehouse is required").isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  body("note").optional({ values: "falsy" }).isLength({ max: 1000 }).withMessage("note must be at most 1000 characters"),
+  body("items").isArray({ min: 1 }).withMessage("items must be a non-empty array"),
+  body("items.*.product").notEmpty().withMessage("product is required").isMongoId().withMessage("product must be a valid ObjectId"),
+  body("items.*.quantityRequested").notEmpty().withMessage("quantityRequested is required").isFloat({ gt: 0 }).withMessage("quantityRequested must be greater than 0"),
+  body("items.*.price").optional().isFloat({ min: 0 }).withMessage("price must be a non-negative number")
+];
+
+const outboundOrderUpdateRules = [
+  body("code").optional({ values: "falsy" }).trim().isLength({ max: 40 }).withMessage("code must be at most 40 characters"),
+  body("customerName").optional().trim().notEmpty().withMessage("customerName cannot be empty").isLength({ max: 200 }).withMessage("customerName must be at most 200 characters"),
+  body("warehouse").optional().isMongoId().withMessage("warehouse must be a valid ObjectId"),
+  body("note").optional({ values: "falsy" }).isLength({ max: 1000 }).withMessage("note must be at most 1000 characters"),
+  body("items").optional().isArray({ min: 1 }).withMessage("items must be a non-empty array"),
+  body("items.*.product").optional().notEmpty().withMessage("product is required").isMongoId().withMessage("product must be a valid ObjectId"),
+  body("items.*.quantityRequested").optional().notEmpty().withMessage("quantityRequested is required").isFloat({ gt: 0 }).withMessage("quantityRequested must be greater than 0"),
+  body("items.*.price").optional().isFloat({ min: 0 }).withMessage("price must be a non-negative number")
+];
+
 const purchaseOrderPartialReceiveRules = [
   body("note").optional({ values: "falsy" }).isLength({ max: 500 }).withMessage("note must be at most 500 characters"),
   body("items").isArray({ min: 1 }).withMessage("items must be a non-empty array"),
@@ -623,5 +654,8 @@ module.exports = {
   inventoryUpdateRules,
   transferOrderListRules,
   transferOrderCreateRules,
-  transferOrderUpdateRules
+  transferOrderUpdateRules,
+  outboundOrderListRules,
+  outboundOrderCreateRules,
+  outboundOrderUpdateRules
 };
