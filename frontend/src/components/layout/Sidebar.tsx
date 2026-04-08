@@ -13,7 +13,8 @@ import {
   Layers,
   Building2,
   Box,
-  Warehouse
+  Warehouse,
+  ArrowRightLeft
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Role } from '@/types/auth';
@@ -30,6 +31,7 @@ const navigation = [
   { name: 'Units', href: '/units', icon: Building2 },
   { name: 'Suppliers', href: '/suppliers', icon: Truck },
   { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
+  { name: 'Transfer Orders', href: '/transfer-orders', icon: ArrowRightLeft },
   { name: 'User Management', href: '/users', icon: Users },
 ];
 
