@@ -11,11 +11,13 @@ const {
   Inventory,
   InventoryTransaction
 } = require("../schemas");
+const { assertAdminUser, assertAdminOrOwner, isAdminUser } = require("../utils/orderAccess");
 
 const purchaseOrderPopulate = [
   { path: "supplier", select: "name code contactName phone email status" },
   { path: "warehouse", select: "name code contactPhone contactEmail status" },
-  { path: "orderedBy", select: "fullName username email status" }
+  { path: "orderedBy", select: "fullName username email status" },
+  { path: "approvedBy", select: "fullName username email status" }
 ];
 
 const purchaseOrderItemPopulate = [
@@ -316,7 +318,7 @@ async function getPurchaseOrderById(id) {
   return getPurchaseOrderDetail(id);
 }
 
-async function updatePurchaseOrderById(id, payload) {
+async function updatePurchaseOrderById(id, payload, user) {
   const session = await mongoose.startSession();
 
   try {
@@ -327,6 +329,8 @@ async function updatePurchaseOrderById(id, payload) {
     if (!order) {
       throw createError(404, "Purchase order not found");
     }
+
+    assertAdminOrOwner(user, order.orderedBy, "You can only update purchase orders that you created");
 
     if (order.status !== "draft") {
       throw createError(409, "Only draft purchase orders can be updated");
@@ -371,12 +375,14 @@ async function updatePurchaseOrderById(id, payload) {
   }
 }
 
-async function submitPurchaseOrder(id) {
+async function submitPurchaseOrder(id, user) {
   const order = await PurchaseOrder.findById(id);
 
   if (!order) {
     throw createError(404, "Purchase order not found");
   }
+
+  assertAdminOrOwner(user, order.orderedBy, "You can only submit purchase orders that you created");
 
   if (order.status !== "draft") {
     throw createError(409, "Only draft purchase orders can be submitted");
@@ -394,7 +400,9 @@ async function submitPurchaseOrder(id) {
   return getPurchaseOrderDetail(order._id);
 }
 
-async function approvePurchaseOrder(id) {
+async function approvePurchaseOrder(id, user) {
+  assertAdminUser(user, "Only admin can approve purchase orders");
+
   const order = await PurchaseOrder.findById(id);
 
   if (!order) {
@@ -406,6 +414,7 @@ async function approvePurchaseOrder(id) {
   }
 
   order.status = "approved";
+  order.approvedBy = user?._id;
   await order.save();
 
   return getPurchaseOrderDetail(order._id);
@@ -479,6 +488,8 @@ async function validateReceiveItemsBelongToOrder(orderId, session) {
 }
 
 async function receivePurchaseOrderPartially(id, payload, user) {
+  assertAdminUser(user, "Only admin can receive purchase orders");
+
   const session = await mongoose.startSession();
 
   try {
@@ -564,6 +575,8 @@ async function receivePurchaseOrderPartially(id, payload, user) {
 }
 
 async function receivePurchaseOrder(id, payload, user) {
+  assertAdminUser(user, "Only admin can receive purchase orders");
+
   const session = await mongoose.startSession();
 
   try {
@@ -634,7 +647,7 @@ async function receivePurchaseOrder(id, payload, user) {
   }
 }
 
-async function cancelPurchaseOrder(id) {
+async function cancelPurchaseOrder(id, user) {
   const order = await PurchaseOrder.findById(id);
 
   if (!order) {
@@ -647,6 +660,14 @@ async function cancelPurchaseOrder(id) {
 
   if (order.status === "cancelled") {
     throw createError(409, "Purchase order has already been cancelled");
+  }
+
+  if (!isAdminUser(user)) {
+    assertAdminOrOwner(user, order.orderedBy, "You can only cancel draft purchase orders that you created");
+
+    if (order.status !== "draft") {
+      throw createError(403, "Only admin can reject submitted purchase orders");
+    }
   }
 
   order.status = "cancelled";

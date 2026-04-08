@@ -2,8 +2,7 @@ const express = require("express");
 
 const usersController = require("../controllers/users");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAuth, authorizePermissions } = require("../utils/authHandler");
-const { PERMISSION_CODES } = require("../utils/accessControlBootstrap");
+const { requireAuth, authorizeRoles } = require("../utils/authHandler");
 const { resolveAppBaseUrl } = require("../utils/accountActivation");
 const { uploadSingle } = require("../utils/uploadHandler");
 const {
@@ -21,7 +20,6 @@ router.use(requireAuth);
 
 router.get(
   "/me",
-  authorizePermissions(PERMISSION_CODES.USER_READ_SELF),
   asyncHandler(async (req, res) => {
     const data = await usersController.getCurrentUser(req.user._id);
 
@@ -34,7 +32,6 @@ router.get(
 
 router.patch(
   "/me",
-  authorizePermissions(PERMISSION_CODES.USER_UPDATE_SELF),
   userSelfUpdateRules,
   validate,
   asyncHandler(async (req, res) => {
@@ -49,7 +46,6 @@ router.patch(
 
 router.get(
   "/",
-  // authorizePermissions(PERMISSION_CODES.USER_READ), // Bỏ yêu cầu quyền Admin để User thường cũng thấy nhau
   userListRules,
   validate,
   asyncHandler(async (req, res) => {
@@ -61,7 +57,7 @@ router.get(
 
 router.get(
   "/:id",
-  authorizePermissions(PERMISSION_CODES.USER_READ),
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
@@ -76,7 +72,7 @@ router.get(
 
 router.post(
   "/",
-  authorizePermissions(PERMISSION_CODES.USER_CREATE),
+  authorizeRoles("admin"),
   userCreateRules,
   validate,
   asyncHandler(async (req, res) => {
@@ -93,7 +89,7 @@ router.post(
 
 router.post(
   "/import",
-  authorizePermissions(PERMISSION_CODES.USER_CREATE),
+  authorizeRoles("admin"),
   uploadSingle("file"),
   asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -128,7 +124,7 @@ router.post(
 
 router.patch(
   "/:id",
-  authorizePermissions(PERMISSION_CODES.USER_UPDATE),
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   userUpdateRules,
   validate,
@@ -148,7 +144,7 @@ router.patch(
 
 router.post(
   "/:id/resend-invite",
-  authorizePermissions(PERMISSION_CODES.USER_UPDATE),
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
@@ -165,7 +161,7 @@ router.post(
 
 router.patch(
   "/:id/lock",
-  authorizePermissions(PERMISSION_CODES.USER_LOCK),
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
@@ -180,7 +176,7 @@ router.patch(
 
 router.patch(
   "/:id/unlock",
-  authorizePermissions(PERMISSION_CODES.USER_UNLOCK),
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
@@ -195,7 +191,7 @@ router.patch(
 
 router.delete(
   "/:id",
-  authorizePermissions(PERMISSION_CODES.USER_DELETE),
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {

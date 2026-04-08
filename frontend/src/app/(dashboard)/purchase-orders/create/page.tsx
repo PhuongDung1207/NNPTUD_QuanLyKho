@@ -1,18 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import type { AxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ArrowLeft, 
   ShoppingCart, 
   Plus, 
   Trash2, 
   Save, 
-  Package as PackageIcon,
   Search,
   RefreshCw,
-  X,
   AlertTriangle
 } from 'lucide-react';
 import { createPO, submitPO } from '@/api/purchaseOrders';
@@ -20,6 +19,8 @@ import { getSuppliers } from '@/api/suppliers';
 import { getWarehouses } from '@/api/warehouses';
 import { getProducts } from '@/api/products';
 import { format } from 'date-fns';
+import { useAuthStore } from '@/store/useAuthStore';
+import { canCreateOrderDocuments } from '@/lib/auth';
 
 interface POFormItem {
   product: string;
@@ -30,9 +31,48 @@ interface POFormItem {
   taxRate: number;
 }
 
+interface POFormData {
+  supplier: string;
+  warehouse: string;
+  expectedDate: string;
+  note: string;
+  items: POFormItem[];
+}
+
+type SubmitType = 'draft' | 'submit';
+
+type POCreateMutationInput = POFormData & {
+  _submitType: SubmitType;
+};
+
+interface SupplierOption {
+  _id: string;
+  name: string;
+}
+
+interface WarehouseOption {
+  _id: string;
+  name: string;
+}
+
+interface ProductOption {
+  _id: string;
+  name: string;
+  sku?: string;
+  purchasePrice?: number;
+}
+
+interface ApiErrorResponse {
+  message?: string;
+  errors?: unknown;
+}
+
 export default function POCreatePage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const queryClient = useQueryClient();
+  const currentUser = useAuthStore((state) => state.user);
+  const canCreateOrders = canCreateOrderDocuments(currentUser);
+  const [formData, setFormData] = useState<POFormData>({
     supplier: '',
     warehouse: '',
     expectedDate: format(new Date(), 'yyyy-MM-dd'),
@@ -51,25 +91,19 @@ export default function POCreatePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const mutationCreate = useMutation({
-    mutationFn: async (data: any) => {
-      // Map data properly to match backend constraints
+    mutationFn: async (data: POCreateMutationInput) => {
       const payload = {
         supplier: data.supplier,
         warehouse: data.warehouse,
-        note: data.note || undefined,
-        expectedDate: data.expectedDate ? new Date(data.expectedDate).toISOString() : undefined,
         items: data.items.map((item: POFormItem) => ({
           product: item.product,
           quantity: Number(item.quantity),
           unitPrice: Number(item.unitPrice),
           taxRate: Number(item.taxRate)
-        }))
+        })),
+        ...(data.note ? { note: data.note } : {}),
+        ...(data.expectedDate ? { expectedDate: new Date(data.expectedDate).toISOString() } : {})
       };
-
-      // Clean undefined fields
-      Object.keys(payload).forEach(k => {
-        if ((payload as any)[k] === undefined) delete (payload as any)[k];
-      });
       
       const res = await createPO(payload);
       
@@ -80,17 +114,19 @@ export default function POCreatePage() {
       return res;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
       router.push('/purchase-orders');
       router.refresh();
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message || err?.message || 'Đã xảy ra lỗi không xác định';
-      const details = err?.response?.data?.errors;
+    onError: (err: unknown) => {
+      const axiosError = err as AxiosError<ApiErrorResponse>;
+      const msg = axiosError.response?.data?.message || axiosError.message || 'Đã xảy ra lỗi không xác định';
+      const details = axiosError.response?.data?.errors;
       setErrorMsg(details ? JSON.stringify(details, null, 2) : msg);
     }
   });
 
-  const addItem = (product: any) => {
+  const addItem = (product: ProductOption) => {
     if (formData.items.find(item => item.product === product._id)) return;
     
     setFormData({
@@ -112,9 +148,12 @@ export default function POCreatePage() {
     setFormData({ ...formData, items: newItems });
   };
 
-  const updateItem = (idx: number, field: keyof POFormItem, value: any) => {
+  const updateItem = (idx: number, field: keyof POFormItem, value: POFormItem[keyof POFormItem]) => {
     const newItems = [...formData.items];
-    (newItems[idx] as any)[field] = value;
+    newItems[idx] = {
+      ...newItems[idx],
+      [field]: value,
+    } as POFormItem;
     setFormData({ ...formData, items: newItems });
   };
 
@@ -135,8 +174,7 @@ export default function POCreatePage() {
 
   const { subtotal, taxAmount, total } = calculateTotals();
 
-  const handleSubmit = (e: React.FormEvent, type: 'draft' | 'submit' = 'draft') => {
-    e.preventDefault();
+  const handleSubmit = (type: SubmitType = 'draft') => {
     if (!formData.supplier || !formData.warehouse || formData.items.length === 0) {
       alert('Vui lòng điền đầy đủ thông tin và thêm ít nhất 1 sản phẩm.');
       return;
@@ -144,6 +182,29 @@ export default function POCreatePage() {
     setErrorMsg(null);
     mutationCreate.mutate({ ...formData, _submitType: type });
   };
+
+  if (currentUser && !canCreateOrders) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="max-w-md rounded-3xl border border-amber-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+            <AlertTriangle size={24} />
+          </div>
+          <h1 className="mt-4 text-xl font-bold text-slate-800">Không có quyền tạo đơn nhập kho</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Chỉ tài khoản `user` hoặc `admin` mới được tạo phiếu nhập kho.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/purchase-orders')}
+            className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-blue-700"
+          >
+            Quay lại danh sách
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -179,7 +240,7 @@ export default function POCreatePage() {
                   onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
                 >
                   <option value="">Chọn nhà cung cấp...</option>
-                  {suppliersData?.data?.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
+                  {suppliersData?.data?.map((s: SupplierOption) => <option key={s._id} value={s._id}>{s.name}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
@@ -191,7 +252,7 @@ export default function POCreatePage() {
                   onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
                 >
                   <option value="">Chọn kho...</option>
-                  {warehousesData?.data?.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+                  {warehousesData?.data?.map((w: WarehouseOption) => <option key={w._id} value={w._id}>{w.name}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
@@ -225,14 +286,14 @@ export default function POCreatePage() {
                 <select 
                   className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-100 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer"
                   onChange={(e) => {
-                    const products = Array.isArray(productsData?.data) ? productsData.data : [];
-                    const p = products.find((x: any) => x._id === e.target.value);
+                    const products = Array.isArray(productsData?.data) ? (productsData.data as ProductOption[]) : [];
+                    const p = products.find((x) => x._id === e.target.value);
                     if (p) addItem(p);
                     e.target.value = "";
                   }}
                 >
                   <option value="">+ Thêm sản phẩm...</option>
-                  {Array.isArray(productsData?.data) && productsData.data.map((p: any) => (
+                  {Array.isArray(productsData?.data) && (productsData.data as ProductOption[]).map((p) => (
                     <option key={p._id} value={p._id}>{p.name}</option>
                   ))}
                 </select>
@@ -338,7 +399,7 @@ export default function POCreatePage() {
               )}
               <button 
                 type="button"
-                onClick={(e) => handleSubmit(e as any, 'draft')}
+                onClick={() => handleSubmit('draft')}
                 disabled={mutationCreate.isPending}
                 className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-blue-600 bg-white px-6 py-3.5 text-sm font-bold text-blue-600 hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50"
               >
@@ -348,7 +409,7 @@ export default function POCreatePage() {
               
               <button 
                 type="button"
-                onClick={(e) => handleSubmit(e as any, 'submit')}
+                onClick={() => handleSubmit('submit')}
                 disabled={mutationCreate.isPending}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50"
               >

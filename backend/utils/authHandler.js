@@ -16,10 +16,6 @@ function getTokenFromRequest(req) {
   return req.cookies?.accessToken || null;
 }
 
-function getPermissionCodes(user) {
-  return (user?.role?.permissions || []).map((permission) => permission.code);
-}
-
 async function requireAuth(req, res, next) {
   try {
     const token = getTokenFromRequest(req);
@@ -34,11 +30,7 @@ async function requireAuth(req, res, next) {
       deletedAt: null
     }).populate({
       path: "role",
-      select: "name code description permissions",
-      populate: {
-        path: "permissions",
-        select: "name code module action description"
-      }
+      select: "name code description"
     });
 
     if (!user) {
@@ -58,7 +50,6 @@ async function requireAuth(req, res, next) {
     }
 
     req.user = user;
-    req.userPermissions = getPermissionCodes(user);
     return next();
   } catch (error) {
     return res.status(401).json({ message: "ban chua dang nhap" });
@@ -77,23 +68,9 @@ function authorizeRoles(...allowedRoles) {
   };
 }
 
-function authorizePermissions(...requiredPermissions) {
-  return function permissionGuard(req, res, next) {
-    const permissionCodes = new Set(req.userPermissions || []);
-    const isAllowed = requiredPermissions.every((permissionCode) => permissionCodes.has(permissionCode));
-
-    if (!isAllowed) {
-      return res.status(403).json({ message: "ban khong co quyen thuc hien thao tac nay" });
-    }
-
-    return next();
-  };
-}
-
 module.exports = {
   requireAuth,
   authorizeRoles,
-  authorizePermissions,
   getJwtSecret,
   getTokenFromRequest
 };

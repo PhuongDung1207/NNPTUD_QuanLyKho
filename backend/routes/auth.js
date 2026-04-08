@@ -3,8 +3,7 @@ const express = require("express");
 const authController = require("../controllers/auth");
 const usersController = require("../controllers/users");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAuth, authorizePermissions } = require("../utils/authHandler");
-const { PERMISSION_CODES } = require("../utils/accessControlBootstrap");
+const { requireAuth } = require("../utils/authHandler");
 const {
   loginRules,
   activationTokenQueryRules,
@@ -72,7 +71,6 @@ router.post("/logout", (req, res) => {
 router.get(
   "/me",
   requireAuth,
-  authorizePermissions(PERMISSION_CODES.USER_READ_SELF),
   asyncHandler(async (req, res) => {
     const data = await usersController.getCurrentUser(req.user._id);
 

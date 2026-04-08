@@ -21,6 +21,8 @@ import Link from 'next/link';
 import { getTransferOrders } from '@/api/transferOrders';
 import { getWarehouses } from '@/api/warehouses';
 import { TransferOrderStatus } from '@/types/transferOrder';
+import { useAuthStore } from '@/store/useAuthStore';
+import { canCreateOrderDocuments } from '@/lib/auth';
 
 const statusLabelMap: Record<TransferOrderStatus, string> = {
   draft: 'Nháp',
@@ -83,6 +85,8 @@ function getWarehouseName(warehouse: unknown) {
 }
 
 export default function TransferOrdersPage() {
+  const currentUser = useAuthStore((state) => state.user);
+  const canCreateOrders = canCreateOrderDocuments(currentUser);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
@@ -123,13 +127,15 @@ export default function TransferOrdersPage() {
           >
             <RefreshCw size={18} className={isFetching ? 'animate-spin' : ''} />
           </button>
-          <Link
-            href="/transfer-orders/create"
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-blue-700 active:scale-95"
-          >
-            <Plus size={18} />
-            Tạo Phiếu Chuyển
-          </Link>
+          {canCreateOrders && (
+            <Link
+              href="/transfer-orders/create"
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-blue-700 active:scale-95"
+            >
+              <Plus size={18} />
+              Tạo Phiếu Chuyển
+            </Link>
+          )}
         </div>
       </div>
 

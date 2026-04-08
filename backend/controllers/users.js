@@ -8,11 +8,7 @@ const { createActivationToken, sendActivationEmail } = require("../utils/account
 const userPopulate = [
   {
     path: "role",
-    select: "name code description permissions",
-    populate: {
-      path: "permissions",
-      select: "name code module action description"
-    }
+    select: "name code description"
   }
 ];
 

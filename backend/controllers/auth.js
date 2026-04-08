@@ -9,11 +9,7 @@ const { hashActivationToken } = require("../utils/accountActivation");
 const authPopulate = [
   {
     path: "role",
-    select: "name code description permissions",
-    populate: {
-      path: "permissions",
-      select: "name code module action description"
-    }
+    select: "name code description"
   }
 ];
 

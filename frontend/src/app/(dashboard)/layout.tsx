@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header';
 import ChatWidget from '@/components/chat/ChatWidget';
 
 export default function DashboardLayout({
@@ -39,7 +38,6 @@ export default function DashboardLayout({
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
         <main className="flex-1 overflow-y-auto p-8">
           <div className="mx-auto max-w-7xl">
             {children}

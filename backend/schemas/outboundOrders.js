@@ -5,7 +5,7 @@ const schemaOptions = {
   versionKey: false
 };
 
-const purchaseOrderSchema = new mongoose.Schema(
+const outboundOrderSchema = new mongoose.Schema(
   {
     code: {
       type: String,
@@ -15,50 +15,38 @@ const purchaseOrderSchema = new mongoose.Schema(
       uppercase: true,
       maxlength: 40
     },
-    supplier: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Supplier",
-      required: true
+    customerName: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200
     },
     warehouse: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Warehouse",
       required: true
     },
-    orderedBy: {
+    issuedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
-    },
-    approvedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
+      ref: "User",
+      required: true
     },
     status: {
       type: String,
-      enum: ["draft", "pending", "approved", "received", "cancelled"],
+      enum: ["draft", "pending", "shipped", "cancelled"],
       default: "draft"
     },
     orderDate: {
       type: Date,
       default: Date.now
     },
-    expectedDate: {
+    shippedAt: {
       type: Date
     },
     note: {
       type: String,
       trim: true,
       maxlength: 1000
-    },
-    subtotal: {
-      type: Number,
-      min: 0,
-      default: 0
-    },
-    taxAmount: {
-      type: Number,
-      min: 0,
-      default: 0
     },
     totalAmount: {
       type: Number,
@@ -69,5 +57,4 @@ const purchaseOrderSchema = new mongoose.Schema(
   schemaOptions
 );
 
-module.exports = mongoose.models.PurchaseOrder || mongoose.model("PurchaseOrder", purchaseOrderSchema);
-
+module.exports = mongoose.models.OutboundOrder || mongoose.model("OutboundOrder", outboundOrderSchema);
