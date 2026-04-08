@@ -9,6 +9,7 @@ const {
   Inventory,
   InventoryTransaction
 } = require("../schemas");
+const { assertAdminUser, assertAdminOrOwner, isAdminUser } = require("../utils/orderAccess");
 
 const outboundOrderPopulate = [
   { path: "warehouse", select: "name code status contactPhone contactEmail" },
@@ -146,13 +147,14 @@ async function getOutboundOrderById(id) {
   return getOutboundOrderDocument(id);
 }
 
-async function submitOutboundOrder(id) {
+async function submitOutboundOrder(id, user) {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
 
     const order = await OutboundOrder.findById(id).session(session);
     if (!order) throw createError(404, "Outbound order not found");
+    assertAdminOrOwner(user, order.issuedBy, "You can only submit outbound orders that you created");
     if (order.status !== "draft") throw createError(409, "Only draft orders can be submitted");
 
     const items = await OutboundOrderItem.find({ outboundOrder: order._id }).session(session);
@@ -190,6 +192,8 @@ async function submitOutboundOrder(id) {
 }
 
 async function shipOutboundOrder(id, user) {
+  assertAdminUser(user, "Only admin can approve outbound orders");
+
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
@@ -249,13 +253,22 @@ async function shipOutboundOrder(id, user) {
   }
 }
 
-async function cancelOutboundOrder(id) {
+async function cancelOutboundOrder(id, user) {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
 
     const order = await OutboundOrder.findById(id).session(session);
     if (!order) throw createError(404, "Outbound order not found");
+
+    if (!isAdminUser(user)) {
+      assertAdminOrOwner(user, order.issuedBy, "You can only cancel draft outbound orders that you created");
+
+      if (order.status !== "draft") {
+        throw createError(403, "Only admin can reject submitted outbound orders");
+      }
+    }
+
     if (["shipped", "cancelled"].includes(order.status)) {
       throw createError(409, `Cannot cancel order in ${order.status} status`);
     }

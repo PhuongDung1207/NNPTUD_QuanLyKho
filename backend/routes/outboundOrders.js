@@ -13,7 +13,7 @@ const {
 
 const router = express.Router();
 
-router.use(requireAuth, authorizeRoles("admin"));
+router.use(requireAuth, authorizeRoles("admin", "user"));
 
 router.get(
   "/",
@@ -56,7 +56,7 @@ router.post(
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
-    const data = await outboundOrdersController.submitOutboundOrder(req.params.id);
+    const data = await outboundOrdersController.submitOutboundOrder(req.params.id, req.user);
     res.json({
       message: "Outbound order submitted successfully",
       data
@@ -66,6 +66,7 @@ router.post(
 
 router.post(
   "/:id/ship",
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
@@ -82,7 +83,7 @@ router.post(
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
-    const data = await outboundOrdersController.cancelOutboundOrder(req.params.id);
+    const data = await outboundOrdersController.cancelOutboundOrder(req.params.id, req.user);
     res.json({
       message: "Outbound order cancelled successfully",
       data

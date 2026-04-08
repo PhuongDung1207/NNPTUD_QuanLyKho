@@ -9,6 +9,7 @@ const {
   Inventory,
   InventoryTransaction
 } = require("../schemas");
+const { assertAdminUser, assertAdminOrOwner, isAdminUser } = require("../utils/orderAccess");
 
 const transferOrderPopulate = [
   { path: "fromWarehouse", select: "name code status contactPhone contactEmail" },
@@ -236,7 +237,7 @@ async function getTransferOrderById(id) {
   return getTransferOrderDocument(id);
 }
 
-async function updateTransferOrderById(id, payload) {
+async function updateTransferOrderById(id, payload, user) {
   const session = await mongoose.startSession();
 
   try {
@@ -247,6 +248,8 @@ async function updateTransferOrderById(id, payload) {
     if (!order) {
       throw createError(404, "Transfer order not found");
     }
+
+    assertAdminOrOwner(user, order.requestedBy, "You can only update transfer orders that you created");
 
     if (order.status !== "draft") {
       throw createError(409, "Only draft transfer orders can be updated");
@@ -287,7 +290,7 @@ async function updateTransferOrderById(id, payload) {
   }
 }
 
-async function submitTransferOrder(id) {
+async function submitTransferOrder(id, user) {
   const session = await mongoose.startSession();
 
   try {
@@ -298,6 +301,8 @@ async function submitTransferOrder(id) {
     if (!order) {
       throw createError(404, "Transfer order not found");
     }
+
+    assertAdminOrOwner(user, order.requestedBy, "You can only submit transfer orders that you created");
 
     if (order.status !== "draft") {
       throw createError(409, "Only draft transfer orders can be submitted");
@@ -344,6 +349,8 @@ async function submitTransferOrder(id) {
 }
 
 async function shipTransferOrder(id, user) {
+  assertAdminUser(user, "Only admin can approve transfer orders");
+
   const session = await mongoose.startSession();
 
   try {
@@ -428,6 +435,8 @@ async function shipTransferOrder(id, user) {
 }
 
 async function receiveTransferOrder(id, user) {
+  assertAdminUser(user, "Only admin can complete transfer orders");
+
   const session = await mongoose.startSession();
 
   try {
@@ -514,7 +523,7 @@ async function receiveTransferOrder(id, user) {
   }
 }
 
-async function cancelTransferOrder(id) {
+async function cancelTransferOrder(id, user) {
   const session = await mongoose.startSession();
 
   try {
@@ -524,6 +533,14 @@ async function cancelTransferOrder(id) {
 
     if (!order) {
       throw createError(404, "Transfer order not found");
+    }
+
+    if (!isAdminUser(user)) {
+      assertAdminOrOwner(user, order.requestedBy, "You can only cancel draft transfer orders that you created");
+
+      if (order.status !== "draft") {
+        throw createError(403, "Only admin can reject submitted transfer orders");
+      }
     }
 
     if (order.status === "cancelled") {

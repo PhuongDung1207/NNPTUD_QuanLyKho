@@ -14,7 +14,8 @@ import {
   Building2,
   Box,
   Warehouse,
-  ArrowRightLeft
+  ArrowRightLeft,
+  ClipboardList
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Role } from '@/types/auth';
@@ -32,8 +33,8 @@ const navigation = [
   { name: 'Units', href: '/units', icon: Building2 },
   { name: 'Suppliers', href: '/suppliers', icon: Building2 },
   { name: 'Transfer Orders', href: '/transfer-orders', icon: ArrowRightLeft },
+  { name: 'Outbound Orders', href: '/outbound-orders', icon: Truck },
   { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
-  { name: 'Transfer Orders', href: '/transfer-orders', icon: ArrowRightLeft },
   { name: 'User Management', href: '/users', icon: Users },
 ];
 
@@ -73,7 +74,7 @@ export default function Sidebar() {
             const isActive = pathname === item.href;
             return (
               <Link
-                key={item.name}
+                key={item.href}
                 href={item.href}
                 className={`group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${isActive
                   ? 'bg-blue-600 text-white'

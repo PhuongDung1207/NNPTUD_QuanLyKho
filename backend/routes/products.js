@@ -1,7 +1,6 @@
 const path = require("path");
 const express = require("express");
-const { requireAuth, authorizePermissions } = require("../utils/authHandler");
-const { PERMISSION_CODES } = require("../utils/accessControlBootstrap");
+const { requireAuth, authorizeRoles } = require("../utils/authHandler");
 const productsController = require("../controllers/products");
 const asyncHandler = require("../utils/asyncHandler");
 const { createDiskUpload, IMAGE_MIME_TYPES } = require("../utils/uploadHandler");
@@ -63,7 +62,7 @@ router.post(
 router.post(
   "/",
   requireAuth,
-  authorizePermissions(PERMISSION_CODES.PRODUCT_CREATE),
+  authorizeRoles("admin"),
   productCreateRules,
   validate,
   asyncHandler(async (req, res) => {
@@ -79,7 +78,7 @@ router.post(
 router.patch(
   "/:id",
   requireAuth,
-  authorizePermissions(PERMISSION_CODES.PRODUCT_UPDATE),
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   productUpdateRules,
   validate,
@@ -96,7 +95,7 @@ router.patch(
 router.delete(
   "/:id",
   requireAuth,
-  authorizePermissions(PERMISSION_CODES.PRODUCT_DELETE),
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {

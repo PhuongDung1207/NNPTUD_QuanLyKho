@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { 
   ShoppingCart, 
   Search, 
-  Filter, 
   Plus, 
   Calendar, 
   Truck,
@@ -13,10 +12,7 @@ import {
   Clock,
   XCircle,
   FileText,
-  MoreVertical,
-  ArrowRight,
   RefreshCw,
-  LayoutGrid,
   ChevronRight
 } from 'lucide-react';
 import { getPOs } from '@/api/purchaseOrders';
@@ -25,8 +21,17 @@ import { getWarehouses } from '@/api/warehouses';
 import { POStatus } from '@/types/purchaseOrder';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { useAuthStore } from '@/store/useAuthStore';
+import { canCreateOrderDocuments } from '@/lib/auth';
+
+interface SupplierOption {
+  _id: string;
+  name: string;
+}
 
 export default function PurchaseOrdersPage() {
+  const currentUser = useAuthStore((state) => state.user);
+  const canCreateOrders = canCreateOrderDocuments(currentUser);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
@@ -105,13 +110,15 @@ export default function PurchaseOrdersPage() {
           >
             <RefreshCw size={18} className={isFetching ? 'animate-spin' : ''} />
           </button>
-          <Link 
-            href="/purchase-orders/create"
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-all active:scale-95"
-          >
-            <Plus size={18} />
-            Tạo Đơn Nhập Mới
-          </Link>
+          {canCreateOrders && (
+            <Link 
+              href="/purchase-orders/create"
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-all active:scale-95"
+            >
+              <Plus size={18} />
+              Tạo Đơn Nhập Mới
+            </Link>
+          )}
         </div>
       </div>
 
@@ -131,7 +138,7 @@ export default function PurchaseOrdersPage() {
         <select
           className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm appearance-none bg-white transition-all shadow-sm"
           value={filters.status}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value as any, page: 1 })}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value as POStatus | '', page: 1 })}
         >
           <option value="">Tất cả trạng thái</option>
           <option value="draft">Nháp (Draft)</option>
@@ -148,7 +155,7 @@ export default function PurchaseOrdersPage() {
           onChange={(e) => setFilters({ ...filters, supplier: e.target.value, page: 1 })}
         >
           <option value="">Tất cả nhà cung cấp</option>
-          {suppliersData?.data?.map((s: any) => (
+          {suppliersData?.data?.map((s: SupplierOption) => (
             <option key={s._id} value={s._id}>{s.name}</option>
           ))}
         </select>

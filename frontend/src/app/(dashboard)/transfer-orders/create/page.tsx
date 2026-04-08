@@ -20,6 +20,8 @@ import { createTransferOrder, submitTransferOrder } from '@/api/transferOrders';
 import { getProducts } from '@/api/products';
 import { getWarehouses } from '@/api/warehouses';
 import { Product } from '@/types/products';
+import { useAuthStore } from '@/store/useAuthStore';
+import { canCreateOrderDocuments } from '@/lib/auth';
 
 interface TransferFormItem {
   product: string;
@@ -45,6 +47,8 @@ function getApiErrorMessage(error: unknown) {
 
 export default function TransferOrderCreatePage() {
   const router = useRouter();
+  const currentUser = useAuthStore((state) => state.user);
+  const canCreateOrders = canCreateOrderDocuments(currentUser);
   const [formData, setFormData] = useState({
     fromWarehouse: '',
     toWarehouse: '',
@@ -159,6 +163,29 @@ export default function TransferOrderCreatePage() {
     setErrorMsg(null);
     mutationCreate.mutate({ ...formData, _submitType: type });
   };
+
+  if (currentUser && !canCreateOrders) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="max-w-md rounded-3xl border border-amber-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+            <AlertTriangle size={24} />
+          </div>
+          <h1 className="mt-4 text-xl font-bold text-slate-800">Không có quyền tạo phiếu chuyển kho</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Chỉ tài khoản `user` hoặc `admin` mới được tạo phiếu chuyển kho.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/transfer-orders')}
+            className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-blue-700"
+          >
+            Quay lại danh sách
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">

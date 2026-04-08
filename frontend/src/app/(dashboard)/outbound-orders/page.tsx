@@ -1,21 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { 
   Search, 
   Plus, 
-  FileText, 
   Truck, 
   X, 
   Save, 
   Loader2,
-  Package,
   MapPin,
-  ChevronRight,
   User,
-  ShoppingBag
 } from 'lucide-react';
 import { 
   getOutboundOrders, 
@@ -27,9 +23,25 @@ import {
 import { getWarehouses } from '@/api/warehouses';
 import { getProducts } from '@/api/products';
 import { OutboundOrder } from '@/types/outboundOrder';
+import { useAuthStore } from '@/store/useAuthStore';
+import { canCreateOrderDocuments, isAdminUser, isCurrentUser } from '@/lib/auth';
+
+interface WarehouseOption {
+  _id: string;
+  name: string;
+}
+
+interface ProductOption {
+  _id: string;
+  name: string;
+  sku?: string;
+}
 
 export default function OutboundOrdersPage() {
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore((state) => state.user);
+  const canCreateOrders = canCreateOrderDocuments(currentUser);
+  const isAdmin = isAdminUser(currentUser);
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -106,7 +118,7 @@ export default function OutboundOrdersPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, JSX.Element> = {
+    const badges: Record<string, ReactNode> = {
       draft: <span className="px-2 py-1 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-full uppercase tracking-wider">Nháp</span>,
       pending: <span className="px-2 py-1 text-[10px] font-bold bg-amber-100 text-amber-600 rounded-full uppercase tracking-wider">Chờ Xuất</span>,
       shipped: <span className="px-2 py-1 text-[10px] font-bold bg-emerald-100 text-emerald-600 rounded-full uppercase tracking-wider">Đã Xuất</span>,
@@ -125,13 +137,15 @@ export default function OutboundOrdersPage() {
           </h1>
           <p className="text-slate-500 mt-1">Lập lệnh xuất, giữ hàng và theo dõi hành trình hàng rời kho.</p>
         </div>
-        <button 
-          onClick={() => setIsFormOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-200 active:scale-95"
-        >
-          <Plus size={20} />
-          Tạo Đơn Xuất Mới
-        </button>
+        {canCreateOrders && (
+          <button 
+            onClick={() => setIsFormOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-200 active:scale-95"
+          >
+            <Plus size={20} />
+            Tạo Đơn Xuất Mới
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -173,69 +187,77 @@ export default function OutboundOrdersPage() {
                   </td>
                 </tr>
               ) : (
-                orders.map((order: any) => (
-                  <tr key={order._id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-800">{order.code}</span>
-                        <span className="text-[10px] text-slate-400">{format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm')}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 font-bold text-slate-700">
-                          <User size={12} className="text-blue-500" />
-                          {order.customerName}
+                orders.map((order: OutboundOrder) => {
+                  const isOwner = isCurrentUser(currentUser, order.issuedBy);
+                  const canSubmitDraft = order.status === 'draft' && (isAdmin || isOwner);
+                  const canCancelOrder =
+                    (order.status === 'draft' && (isAdmin || isOwner)) ||
+                    (order.status === 'pending' && isAdmin);
+
+                  return (
+                    <tr key={order._id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-800">{order.code}</span>
+                          <span className="text-[10px] text-slate-400">{format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm')}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                          <MapPin size={12} />
-                          {order.warehouse?.name}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                            <User size={12} className="text-blue-500" />
+                            {order.customerName}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <MapPin size={12} />
+                            {order.warehouse?.name}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {getStatusBadge(order.status)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        {order.status === 'draft' && (
-                          <button 
-                            onClick={() => mutationSubmit.mutate(order._id)}
-                            disabled={mutationSubmit.isPending}
-                            className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg hover:bg-blue-100 transition-colors"
-                          >
-                            Gửi Duyệt
-                          </button>
-                        )}
-                        {order.status === 'pending' && (
-                          <button 
-                            onClick={() => mutationShip.mutate(order._id)}
-                            disabled={mutationShip.isPending}
-                            className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg hover:bg-emerald-100 transition-colors"
-                          >
-                            Xuất Kho
-                          </button>
-                        )}
-                        {(order.status === 'draft' || order.status === 'pending') && (
-                          <button 
-                            onClick={() => mutationCancel.mutate(order._id)}
-                            disabled={mutationCancel.isPending}
-                            className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg hover:bg-rose-100 transition-colors"
-                          >
-                            Hủy
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {getStatusBadge(order.status)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          {canSubmitDraft && (
+                            <button 
+                              onClick={() => mutationSubmit.mutate(order._id)}
+                              disabled={mutationSubmit.isPending}
+                              className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg hover:bg-blue-100 transition-colors"
+                            >
+                              Gửi Duyệt
+                            </button>
+                          )}
+                          {order.status === 'pending' && isAdmin && (
+                            <button 
+                              onClick={() => mutationShip.mutate(order._id)}
+                              disabled={mutationShip.isPending}
+                              className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg hover:bg-emerald-100 transition-colors"
+                            >
+                              Xuất Kho
+                            </button>
+                          )}
+                          {canCancelOrder && (
+                            <button 
+                              onClick={() => mutationCancel.mutate(order._id)}
+                              disabled={mutationCancel.isPending}
+                              className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg hover:bg-rose-100 transition-colors"
+                            >
+                              Hủy
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {isFormOpen && (
+      {isFormOpen && canCreateOrders && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-3xl">
@@ -278,7 +300,7 @@ export default function OutboundOrdersPage() {
                       onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
                     >
                       <option value="">Chọn kho...</option>
-                      {warehouses.map((w: any) => (
+                      {warehouses.map((w: WarehouseOption) => (
                         <option key={w._id} value={w._id}>{w.name}</option>
                       ))}
                     </select>
@@ -313,7 +335,7 @@ export default function OutboundOrdersPage() {
                         }}
                       >
                         <option value="">Chọn sản phẩm...</option>
-                        {products.map((p: any) => (
+                        {products.map((p: ProductOption) => (
                           <option key={p._id} value={p._id}>{p.name} ({p.sku})</option>
                         ))}
                       </select>

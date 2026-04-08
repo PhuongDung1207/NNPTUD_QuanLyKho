@@ -16,7 +16,7 @@ const {
 
 const router = express.Router();
 
-router.use(requireAuth, authorizeRoles("admin"));
+router.use(requireAuth, authorizeRoles("admin", "user"));
 
 router.get(
   "/",
@@ -77,7 +77,7 @@ router.post(
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
-    const data = await purchaseOrdersController.submitPurchaseOrder(req.params.id);
+    const data = await purchaseOrdersController.submitPurchaseOrder(req.params.id, req.user);
 
     res.json({
       message: "Purchase order submitted successfully",
@@ -88,10 +88,11 @@ router.post(
 
 router.post(
   "/:id/approve",
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
-    const data = await purchaseOrdersController.approvePurchaseOrder(req.params.id);
+    const data = await purchaseOrdersController.approvePurchaseOrder(req.params.id, req.user);
 
     res.json({
       message: "Purchase order approved successfully",
@@ -102,6 +103,7 @@ router.post(
 
 router.post(
   "/:id/receive-partial",
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   purchaseOrderPartialReceiveRules,
   batchLotReceiveItemRules,
@@ -118,6 +120,7 @@ router.post(
 
 router.post(
   "/:id/receive",
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   purchaseOrderReceiveRules,
   batchLotReceiveItemRules,
@@ -137,7 +140,7 @@ router.post(
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
-    const data = await purchaseOrdersController.cancelPurchaseOrder(req.params.id);
+    const data = await purchaseOrdersController.cancelPurchaseOrder(req.params.id, req.user);
 
     res.json({
       message: "Purchase order cancelled successfully",

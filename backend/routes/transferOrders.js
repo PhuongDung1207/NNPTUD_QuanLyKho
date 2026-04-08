@@ -13,7 +13,7 @@ const {
 
 const router = express.Router();
 
-router.use(requireAuth, authorizeRoles("admin"));
+router.use(requireAuth, authorizeRoles("admin", "user"));
 
 router.get(
   "/",
@@ -57,7 +57,7 @@ router.patch(
   transferOrderUpdateRules,
   validate,
   asyncHandler(async (req, res) => {
-    const data = await transferOrdersController.updateTransferOrderById(req.params.id, req.body);
+    const data = await transferOrdersController.updateTransferOrderById(req.params.id, req.body, req.user);
     res.json({
       message: "Transfer order updated successfully",
       data
@@ -70,7 +70,7 @@ router.post(
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
-    const data = await transferOrdersController.submitTransferOrder(req.params.id);
+    const data = await transferOrdersController.submitTransferOrder(req.params.id, req.user);
     res.json({
       message: "Transfer order submitted successfully",
       data
@@ -80,6 +80,7 @@ router.post(
 
 router.post(
   "/:id/ship",
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
@@ -93,6 +94,7 @@ router.post(
 
 router.post(
   "/:id/receive",
+  authorizeRoles("admin"),
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
@@ -109,7 +111,7 @@ router.post(
   mongoIdParamRule("id"),
   validate,
   asyncHandler(async (req, res) => {
-    const data = await transferOrdersController.cancelTransferOrder(req.params.id);
+    const data = await transferOrdersController.cancelTransferOrder(req.params.id, req.user);
     res.json({
       message: "Transfer order cancelled successfully",
       data

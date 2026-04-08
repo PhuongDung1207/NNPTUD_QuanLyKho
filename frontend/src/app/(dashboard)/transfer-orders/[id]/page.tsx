@@ -28,6 +28,8 @@ import {
   submitTransferOrder
 } from '@/api/transferOrders';
 import { TransferOrderItem, TransferOrderStatus } from '@/types/transferOrder';
+import { useAuthStore } from '@/store/useAuthStore';
+import { isAdminUser, isCurrentUser } from '@/lib/auth';
 
 const statusLabelMap: Record<TransferOrderStatus, string> = {
   draft: 'Nháp',
@@ -127,6 +129,7 @@ export default function TransferOrderDetailPage() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore((state) => state.user);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: transferResponse, isLoading } = useQuery({
@@ -192,6 +195,12 @@ export default function TransferOrderDetailPage() {
   const totalReceived = items.reduce((total, item) => total + Number(item.quantityReceived || 0), 0);
   const isMutating =
     mutationSubmit.isPending || mutationShip.isPending || mutationReceive.isPending || mutationCancel.isPending;
+  const isAdmin = isAdminUser(currentUser);
+  const isOwner = isCurrentUser(currentUser, transferOrder.requestedBy);
+  const canSubmitDraft = transferOrder.status === 'draft' && (isAdmin || isOwner);
+  const canCancelOrder =
+    (transferOrder.status === 'draft' && (isAdmin || isOwner)) ||
+    (transferOrder.status === 'pending' && isAdmin);
 
   const runAction = (callback: () => void, confirmMessage?: string) => {
     setActionError(null);
@@ -231,8 +240,8 @@ export default function TransferOrderDetailPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {transferOrder.status === 'draft' && (
+      <div className="flex flex-wrap items-center gap-2">
+          {canSubmitDraft && (
             <button
               onClick={() =>
                 runAction(() => mutationSubmit.mutate(), 'Gửi phiếu chuyển sang trạng thái chờ xuất kho?')
@@ -245,7 +254,7 @@ export default function TransferOrderDetailPage() {
             </button>
           )}
 
-          {transferOrder.status === 'pending' && (
+          {transferOrder.status === 'pending' && isAdmin && (
             <button
               onClick={() =>
                 runAction(() => mutationShip.mutate(), 'Xác nhận xuất toàn bộ số lượng từ kho nguồn?')
@@ -258,7 +267,7 @@ export default function TransferOrderDetailPage() {
             </button>
           )}
 
-          {transferOrder.status === 'in_transit' && (
+          {transferOrder.status === 'in_transit' && isAdmin && (
             <button
               onClick={() =>
                 runAction(() => mutationReceive.mutate(), 'Xác nhận hàng đã nhập vào kho đích?')
@@ -271,7 +280,7 @@ export default function TransferOrderDetailPage() {
             </button>
           )}
 
-          {['draft', 'pending'].includes(transferOrder.status) && (
+          {canCancelOrder && (
             <button
               onClick={() =>
                 runAction(

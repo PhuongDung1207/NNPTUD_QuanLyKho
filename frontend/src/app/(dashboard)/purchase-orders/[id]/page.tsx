@@ -1,26 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ArrowLeft, 
-  ShoppingCart, 
-  Calendar, 
   Truck, 
   User as UserIcon, 
   FileText, 
   CheckCircle2, 
   XCircle, 
-  Clock, 
-  Plus, 
   Trash2, 
   Save, 
   Send,
   AlertTriangle,
   History,
   Box,
-  ChevronRight,
   Package as PackageIcon,
   Warehouse as WarehouseIcon,
   RefreshCw
@@ -32,15 +27,39 @@ import {
   cancelPO, 
   receivePartial 
 } from '@/api/purchaseOrders';
-import { POStatus, ReceivePOPayload } from '@/types/purchaseOrder';
+import { POStatus, ReceiveItemPayload, ReceivePOPayload } from '@/types/purchaseOrder';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { useAuthStore } from '@/store/useAuthStore';
+import { isAdminUser, isCurrentUser } from '@/lib/auth';
+import { User } from '@/types/auth';
+
+type UserSummary = Pick<User, 'fullName' | 'username'>;
+
+interface ReceiveModalItem extends ReceiveItemPayload {
+  productName: string;
+  tracking: 'none' | 'lot';
+}
+
+interface ReceiveModalState {
+  note: string;
+  items: ReceiveModalItem[];
+}
+
+function getDisplayUserName(user: string | UserSummary | undefined, fallback: string) {
+  if (user && typeof user === 'object') {
+    return user.fullName || user.username || fallback;
+  }
+
+  return fallback;
+}
 
 export default function PODetailPage() {
   const { id } = useParams() as { id: string };
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore((state) => state.user);
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
-  const [receiveData, setReceiveData] = useState<ReceivePOPayload>({
+  const [receiveData, setReceiveData] = useState<ReceiveModalState>({
     note: '',
     items: [],
   });
@@ -90,6 +109,13 @@ export default function PODetailPage() {
   if (isLoading) return <div className="p-8 text-center text-slate-500"><RefreshCw className="animate-spin inline-block mr-2" /> Đang tải dữ liệu...</div>;
   if (!po) return <div className="p-8 text-center text-rose-500">Không tìm thấy đơn hàng.</div>;
 
+  const isAdmin = isAdminUser(currentUser);
+  const isOwner = isCurrentUser(currentUser, po.orderedBy);
+  const canSubmitDraft = po.status === 'draft' && (isAdmin || isOwner);
+  const canCancelOrder =
+    (po.status === 'draft' && (isAdmin || isOwner)) ||
+    (['pending', 'approved'].includes(po.status) && isAdmin);
+
   const getStatusBadge = (status: POStatus) => {
     const styles = {
       draft: 'bg-slate-100 text-slate-600 border-slate-200',
@@ -122,7 +148,7 @@ export default function PODetailPage() {
         }] : undefined
       }));
     
-    setReceiveData({ note: '', items: initialItems as any });
+    setReceiveData({ note: '', items: initialItems });
     setIsReceiveModalOpen(true);
   };
 
@@ -166,22 +192,22 @@ export default function PODetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {po.status === 'draft' && (
+          {canSubmitDraft && (
             <button onClick={() => mutationSubmit.mutate()} className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-all">
               <Send size={18} /> Gửi duyệt
             </button>
           )}
-          {po.status === 'pending' && (
+          {po.status === 'pending' && isAdmin && (
             <button onClick={() => mutationApprove.mutate()} className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-all">
               <CheckCircle2 size={18} /> Phê duyệt
             </button>
           )}
-          {(po.status === 'approved' || po.status === 'receiving') && (
+          {(po.status === 'approved' || po.status === 'receiving') && isAdmin && (
             <button onClick={handleOpenReceive} className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-all">
               <Box size={18} /> Nhận hàng
             </button>
           )}
-          {['draft', 'pending', 'approved'].includes(po.status) && (
+          {canCancelOrder && (
             <button onClick={() => mutationCancel.mutate()} className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-5 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-100 transition-all">
               <XCircle size={18} /> Hủy đơn
             </button>
@@ -276,13 +302,13 @@ export default function PODetailPage() {
               <div className="flex items-center gap-2 text-xs">
                 <UserIcon size={12} className="text-slate-500" />
                 <span className="text-slate-400">Tạo bởi:</span>
-                <span className="font-medium">{po.orderedBy && typeof po.orderedBy === 'object' ? (po.orderedBy as any).fullName || (po.orderedBy as any).username : 'Hệ thống'}</span>
+                <span className="font-medium">{getDisplayUserName(po.orderedBy, 'Hệ thống')}</span>
               </div>
               {po.approvedBy && (
                 <div className="flex items-center gap-2 text-xs text-emerald-400">
                   <CheckCircle2 size={12} />
                   <span className="text-slate-400">Duyệt bởi:</span>
-                  <span className="font-medium">{typeof po.approvedBy === 'object' ? (po.approvedBy as any).fullName || (po.approvedBy as any).username : 'Admin'}</span>
+                  <span className="font-medium">{getDisplayUserName(po.approvedBy, 'Admin')}</span>
                 </div>
               )}
             </div>
@@ -302,7 +328,7 @@ export default function PODetailPage() {
             </div>
 
             <div className="p-8 overflow-y-auto flex-1 space-y-6">
-              {receiveData.items.map((item: any, idx: number) => (
+              {receiveData.items.map((item, idx) => (
                 <div key={item.purchaseOrderItemId} className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -328,7 +354,7 @@ export default function PODetailPage() {
                         <button onClick={() => handleAddLot(idx)} className="text-[10px] font-bold text-blue-600">+ Thêm lô</button>
                       </div>
                       <div className="space-y-4">
-                        {item.batchLots && item.batchLots.map((lot: any, lotIdx: number) => (
+                        {item.batchLots && item.batchLots.map((lot, lotIdx: number) => (
                           <div key={lotIdx} className="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div className="md:col-span-1">
                               <label className="text-[10px] text-slate-400 font-bold">Mã Lô</label>
@@ -370,7 +396,7 @@ export default function PODetailPage() {
                                         setReceiveData({ ...receiveData, items: newItems });
                                       }
                                     }} />
-                                  {item.batchLots.length > 1 && (
+                                  {item.batchLots && item.batchLots.length > 1 && (
                                     <button onClick={() => {
                                         const newItems = [...receiveData.items];
                                         if (newItems[idx] && newItems[idx].batchLots) {

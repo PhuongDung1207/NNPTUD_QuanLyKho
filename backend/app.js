@@ -10,15 +10,15 @@ const createError = require("http-errors");
 
 const cors = require("cors");
 const apiRouter = require("./routes");
-const { seedAccessControl } = require("./utils/accessControlBootstrap");
+const { seedRolesAndAdmin } = require("./utils/roleBootstrap");
 
 const app = express();
 
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/warehouse');
 mongoose.connection.on('connected', function () {
   console.log("connected");
-  seedAccessControl().catch((error) => {
-    console.error("failed to seed access control", error);
+  seedRolesAndAdmin().catch((error) => {
+    console.error("failed to seed roles", error);
   });
 })
 mongoose.connection.on('disconnected', function () {

@@ -2,15 +2,14 @@ const express = require("express");
 
 const rolesController = require("../controllers/roles");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAuth, authorizePermissions } = require("../utils/authHandler");
-const { PERMISSION_CODES } = require("../utils/accessControlBootstrap");
+const { requireAuth, authorizeRoles } = require("../utils/authHandler");
 
 const router = express.Router();
 
 router.get(
   "/",
   requireAuth,
-  authorizePermissions(PERMISSION_CODES.ROLE_READ),
+  authorizeRoles("admin"),
   asyncHandler(async (req, res) => {
     const result = await rolesController.listRoles();
 
