@@ -272,7 +272,7 @@ async function createPurchaseOrder(payload, user) {
       normalizedItems.map((item) => ({
         purchaseOrder: order._id,
         ...item
-        })),
+      })),
       { session }
     );
 
